@@ -292,7 +292,14 @@ test/
 │   ├── ReentrancyGuard.t.sol           # UT-089 ~ UT-095
 │   └── EdgeCases.t.sol                 # UT-096 ~ UT-104
 ├── integration/
-│   └── (集成测试 — 不在本清单范围)
+│   ├── happypath/
+│   │   ├── HappyPath.t.sol             # IT-001/IT-002（Happy Path）
+│   │   ├── happy-path-checklist.md
+│   │   └── ...（trace/report 等辅助文件）
+│   └── full/
+│       ├── integration-test-checklist.md  # IT-003~IT-022 完整集成清单
+│       ├── implement-agent-prompt.md
+│       └── ...（6 个测试合约文件，待实现）
 └── mocks/
     ├── MockERC20.sol                   ← 已存在
     ├── MockHook.sol                    # IACPHook 实现（记录调用）

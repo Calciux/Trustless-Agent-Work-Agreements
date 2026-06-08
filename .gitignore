@@ -2,3 +2,4 @@ scratch/
 cache/
 out/
 lib/
+.env
