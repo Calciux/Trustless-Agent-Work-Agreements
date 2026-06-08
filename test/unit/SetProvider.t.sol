@@ -101,7 +101,7 @@ contract SetProviderTest is Test {
         uint256 jid = _createJob();
 
         address stranger = makeAddr("stranger");
-        vm.expectRevert("ERC8183: caller is not client");
+        vm.expectRevert("ERC8183: caller is not client or operator");
         vm.prank(stranger);
         escrow.setProvider(jid, provider);
     }

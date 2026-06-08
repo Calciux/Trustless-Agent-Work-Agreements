@@ -94,6 +94,16 @@ contract ERC8183Escrow is IERC8183 {
         _;
     }
 
+    // @dev 仅限任务客户或操作者调用
+    modifier onlyClientOrOperator(uint256 jobId) {
+        Job storage job = _jobs[jobId];
+        require(
+            msg.sender == job.client || msg.sender == job.operator,
+            "ERC8183: caller is not client or operator"
+        );
+        _;
+    }
+
     // ========== 构造函数 ==========
 
     // @notice 部署托管合约
@@ -187,7 +197,39 @@ contract ERC8183Escrow is IERC8183 {
             budget: 0,
             expiredAt: expiredAt,
             status: Status.Open,
-            hook: hook
+            hook: hook,
+            paymentToken: address(0), // use global default
+            operator: address(0) // no operator
+        });
+
+        emit JobCreated(jobId, msg.sender, provider, evaluator, expiredAt);
+    }
+
+    // @notice Creates a job with a per-job payment token.
+    // @dev paymentToken_=address(0) falls back to the global default.
+    function createJob(
+        address provider,
+        address evaluator,
+        uint256 expiredAt,
+        string calldata description,
+        address hook,
+        address paymentToken_
+    ) external override returns (uint256 jobId) {
+        require(evaluator != address(0), "ERC8183: evaluator is zero address");
+        require(expiredAt > block.timestamp, "ERC8183: expiredAt not in future");
+
+        jobId = ++_jobCounter;
+        _jobs[jobId] = Job({
+            client: msg.sender,
+            provider: provider,
+            evaluator: evaluator,
+            description: description,
+            budget: 0,
+            expiredAt: expiredAt,
+            status: Status.Open,
+            hook: hook,
+            paymentToken: paymentToken_, // per-job token
+            operator: address(0) // no operator
         });
 
         emit JobCreated(jobId, msg.sender, provider, evaluator, expiredAt);
@@ -210,7 +252,7 @@ contract ERC8183Escrow is IERC8183 {
     function _setProvider(uint256 jobId, address provider, bytes memory optParams, bytes4 selector)
         private
         nonReentrant
-        onlyClient(jobId)
+        onlyClientOrOperator(jobId)
         onlyStatus(jobId, Status.Open)
     {
         Job storage job = _jobs[jobId];
@@ -229,6 +271,17 @@ contract ERC8183Escrow is IERC8183 {
 
         // Hook: afterAction
         _callAfterHook(job.hook, jobId, selector, optParams);
+    }
+
+    // ========== 核心函数：设置操作者 ==========
+
+    // @notice Sets or clears the operator for a job. Only the job's client MAY call this.
+    // @dev SHALL revert if caller is not the job's client or job is not Open.
+    // @param jobId The job identifier.
+    // @param operator The operator address (address(0) to revoke).
+    function setOperator(uint256 jobId, address operator) external override nonReentrant onlyClient(jobId) onlyStatus(jobId, Status.Open) {
+        _jobs[jobId].operator = operator;
+        emit OperatorSet(jobId, operator);
     }
 
     // ========== 核心函数：设置预算 ==========
@@ -305,7 +358,7 @@ contract ERC8183Escrow is IERC8183 {
 
         // SHALL transfer job.budget of the payment token from client to escrow
         // （客户需事先对托管合约执行 approve）
-        require(_paymentToken.transferFrom(msg.sender, address(this), job.budget), "ERC8183: transferFrom failed");
+        require(_resolveToken(jobId).transferFrom(msg.sender, address(this), job.budget), "ERC8183: transferFrom failed");
 
         emit JobFunded(jobId, msg.sender, job.budget);
 
@@ -390,11 +443,12 @@ contract ERC8183Escrow is IERC8183 {
         }
 
         // 放款给 Provider（扣除手续费后的金额）
-        require(_paymentToken.transfer(providerAddr, payAmount), "ERC8183: payment transfer failed");
+        IERC20Minimal token = _resolveToken(jobId);
+        require(token.transfer(providerAddr, payAmount), "ERC8183: payment transfer failed");
 
         // 支付平台手续费（如果有）
         if (fee > 0) {
-            require(_paymentToken.transfer(treasury, fee), "ERC8183: fee transfer failed");
+            require(token.transfer(treasury, fee), "ERC8183: fee transfer failed");
         }
 
         // 事件：状态确认 + 金额明细
@@ -451,7 +505,7 @@ contract ERC8183Escrow is IERC8183 {
 
         if (shouldRefund) {
             refundAmount = job.budget;
-            require(_paymentToken.transfer(refundTarget, refundAmount), "ERC8183: refund transfer failed");
+            require(_resolveToken(jobId).transfer(refundTarget, refundAmount), "ERC8183: refund transfer failed");
         }
 
         // 事件：rejector = msg.sender（Client 或 Evaluator） + 如有退款则 Refunded
@@ -488,7 +542,7 @@ contract ERC8183Escrow is IERC8183 {
         uint256 refundAmount = job.budget;
         address refundTarget = job.client;
 
-        require(_paymentToken.transfer(refundTarget, refundAmount), "ERC8183: refund transfer failed");
+        require(_resolveToken(jobId).transfer(refundTarget, refundAmount), "ERC8183: refund transfer failed");
 
         // 事件：状态确认 + 退款金额明细
         emit JobExpired(jobId);
@@ -499,6 +553,15 @@ contract ERC8183Escrow is IERC8183 {
     }
 
     // ========== 内部辅助：Hook 调用 ==========
+
+    // @dev Resolves the effective ERC-20 token for a job.
+    //      Returns per-job token if set, otherwise the global default.
+    // @param jobId The job identifier.
+    // @return IERC20Minimal interface to the resolved token.
+    function _resolveToken(uint256 jobId) internal view returns (IERC20Minimal) {
+        address pt = _jobs[jobId].paymentToken;
+        return pt != address(0) ? IERC20Minimal(pt) : _paymentToken;
+    }
 
     // @dev 调用 Hook 合约的 beforeAction（如果设置了 Hook）
     function _callBeforeHook(address hook, uint256 jobId, bytes4 selector, bytes memory data) private {

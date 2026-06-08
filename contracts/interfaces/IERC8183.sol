@@ -38,6 +38,8 @@ interface IERC8183 is IERC165 {
         uint256 expiredAt;
         Status status;
         address hook; // address(0) if no hook
+        address paymentToken; // NEW: per-job ERC-20, address(0) = use global default
+        address operator; // NEW: delegated setProvider authority, address(0) = none
     }
 
     // ── Events ──────────────────────────────────────────────────────
@@ -64,6 +66,11 @@ interface IERC8183 is IERC165 {
 
     event Refunded(uint256 indexed jobId, address indexed client, uint256 amount);
 
+    /// @notice Emitted when a job's operator is set or cleared.
+    /// @param jobId The job identifier.
+    /// @param operator The operator address (address(0) means role revoked).
+    event OperatorSet(uint256 indexed jobId, address indexed operator);
+
     // ── Core Functions ──────────────────────────────────────────────
 
     function createJob(
@@ -74,9 +81,23 @@ interface IERC8183 is IERC165 {
         address hook
     ) external returns (uint256 jobId);
 
+    /// @notice Creates a job with a per-job payment token.
+    /// @dev paymentToken=address(0) falls back to the global default.
+    function createJob(
+        address provider,
+        address evaluator,
+        uint256 expiredAt,
+        string calldata description,
+        address hook,
+        address paymentToken
+    ) external returns (uint256 jobId);
+
     // setProvider: two overloads — without and with optParams (OPTIONAL)
     function setProvider(uint256 jobId, address provider) external;
     function setProvider(uint256 jobId, address provider, bytes calldata optParams) external;
+
+    // setOperator: sets/clears operator for a job (client-only)
+    function setOperator(uint256 jobId, address operator) external;
 
     // setBudget: two overloads
     function setBudget(uint256 jobId, uint256 amount) external;

@@ -127,16 +127,13 @@ contract RejectPathsTest is Test {
     // ================================================================
     function test_IT005_EvaluatorRejectsFundedFullRefund() public {
         ERC8183Escrow escrow = new ERC8183Escrow(address(token), address(0), 0);
-        token.mint(client, 1000);
-        vm.prank(client);
-        token.approve(address(escrow), 1000);
 
-        // ── Step 1: setup to Funded ──
+        // ── _setupFunded 内部会 mint budgetAmt + approve + fund，无需额外 mint
         uint256 jobId = _setupFunded(escrow, 500);
 
         assertEq(uint256(escrow.getStatus(1)), uint256(IERC8183.Status.Funded));
         assertEq(token.balanceOf(address(escrow)), 500);
-        assertEq(token.balanceOf(client), 500);
+        assertEq(token.balanceOf(client), 0);  // _setupFunded mint 500 → fund 500 → 0
 
         // ── Step 2: reject(Evaluator) ──
         bytes32 reason = bytes32("not qualified");
@@ -149,8 +146,8 @@ contract RejectPathsTest is Test {
 
         assertEq(uint256(escrow.getStatus(1)), uint256(IERC8183.Status.Rejected));
         assertEq(token.balanceOf(address(escrow)), 0);  // 全额退还
-        assertEq(token.balanceOf(client), 1000);        // 恢复 fund 前余额
-        assertEq(token.balanceOf(evaluator), 0);        // Evaluator 永不触碰资金
+        assertEq(token.balanceOf(client), 500);          // 退款 500 到账
+        assertEq(token.balanceOf(evaluator), 0);         // Evaluator 永不触碰资金
     }
 
     // ================================================================
@@ -158,11 +155,8 @@ contract RejectPathsTest is Test {
     // ================================================================
     function test_IT006_EvaluatorRejectsSubmittedFullRefund() public {
         ERC8183Escrow escrow = new ERC8183Escrow(address(token), address(0), 0);
-        token.mint(client, 1000);
-        vm.prank(client);
-        token.approve(address(escrow), 1000);
 
-        // ── Step 1: setup to Funded + submit to Submitted ──
+        // ── _setupFunded 内部会 mint + approve + fund，无需额外操作
         uint256 jobId = _setupFunded(escrow, 500);
         vm.expectEmit(true, true, false, true);
         emit IERC8183.JobSubmitted(1, provider, bytes32(uint256(1)));
@@ -171,7 +165,7 @@ contract RejectPathsTest is Test {
 
         assertEq(uint256(escrow.getStatus(1)), uint256(IERC8183.Status.Submitted));
 
-        // ── Step 2: reject(Evaluator) ──
+        // ── reject(Evaluator) ──
         bytes32 reason = bytes32("quality fail");
         vm.expectEmit(true, true, false, true);
         emit IERC8183.JobRejected(1, evaluator, reason);
@@ -182,8 +176,8 @@ contract RejectPathsTest is Test {
 
         assertEq(uint256(escrow.getStatus(1)), uint256(IERC8183.Status.Rejected));
         assertEq(token.balanceOf(address(escrow)), 0);
-        assertEq(token.balanceOf(client), 1000);
-        assertEq(token.balanceOf(provider), 0);  // Provider 未收款
+        assertEq(token.balanceOf(client), 500);          // 退款 500 到账
+        assertEq(token.balanceOf(provider), 0);          // Provider 未收款
     }
 
     // ================================================================

@@ -47,8 +47,8 @@ contract EdgeCasesTest is Test {
         vm.expectRevert("ERC8183: job not found");
         escrow.getJob(999);
 
-        // setProvider on non-existent job: onlyClient reads _jobs[0].client=address(0)
-        vm.expectRevert("ERC8183: caller is not client");
+        // setProvider on non-existent job: onlyClientOrOperator reads _jobs[0].client=address(0)
+        vm.expectRevert("ERC8183: caller is not client or operator");
         vm.prank(makeAddr("rando"));
         escrow.setProvider(0, provider);
 
