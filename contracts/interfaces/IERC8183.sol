@@ -19,35 +19,31 @@ interface IERC8183 is IERC165 {
     // ── Status ──────────────────────────────────────────────────────
 
     enum Status {
-        Open,       // Created; budget may be set, then funded or rejected
-        Funded,     // Budget escrowed; provider may submit, evaluator may reject
-        Submitted,  // Provider has submitted work; only evaluator may complete/reject
-        Completed,  // Terminal; escrow released to provider (minus fees)
-        Rejected,   // Terminal; escrow refunded to client
-        Expired     // Terminal; same as Rejected, triggered by timeout
+        Open, // Created; budget may be set, then funded or rejected
+        Funded, // Budget escrowed; provider may submit, evaluator may reject
+        Submitted, // Provider has submitted work; only evaluator may complete/reject
+        Completed, // Terminal; escrow released to provider (minus fees)
+        Rejected, // Terminal; escrow refunded to client
+        Expired // Terminal; same as Rejected, triggered by timeout
     }
 
     // ── Job Data ────────────────────────────────────────────────────
 
     struct Job {
         address client;
-        address provider;    // MAY be address(0) at creation
+        address provider; // MAY be address(0) at creation
         address evaluator;
-        string  description;
+        string description;
         uint256 budget;
         uint256 expiredAt;
-        Status  status;
-        address hook;        // address(0) if no hook
+        Status status;
+        address hook; // address(0) if no hook
     }
 
     // ── Events ──────────────────────────────────────────────────────
 
     event JobCreated(
-        uint256 indexed jobId,
-        address indexed client,
-        address indexed provider,
-        address evaluator,
-        uint256 expiredAt
+        uint256 indexed jobId, address indexed client, address indexed provider, address evaluator, uint256 expiredAt
     );
 
     event ProviderSet(uint256 indexed jobId, address indexed provider);
@@ -56,37 +52,17 @@ interface IERC8183 is IERC165 {
 
     event JobFunded(uint256 indexed jobId, address indexed client, uint256 amount);
 
-    event JobSubmitted(
-        uint256 indexed jobId,
-        address indexed provider,
-        bytes32 deliverable
-    );
+    event JobSubmitted(uint256 indexed jobId, address indexed provider, bytes32 deliverable);
 
-    event JobCompleted(
-        uint256 indexed jobId,
-        address indexed evaluator,
-        bytes32 reason
-    );
+    event JobCompleted(uint256 indexed jobId, address indexed evaluator, bytes32 reason);
 
-    event JobRejected(
-        uint256 indexed jobId,
-        address indexed rejector,
-        bytes32 reason
-    );
+    event JobRejected(uint256 indexed jobId, address indexed rejector, bytes32 reason);
 
     event JobExpired(uint256 indexed jobId);
 
-    event PaymentReleased(
-        uint256 indexed jobId,
-        address indexed provider,
-        uint256 amount
-    );
+    event PaymentReleased(uint256 indexed jobId, address indexed provider, uint256 amount);
 
-    event Refunded(
-        uint256 indexed jobId,
-        address indexed client,
-        uint256 amount
-    );
+    event Refunded(uint256 indexed jobId, address indexed client, uint256 amount);
 
     // ── Core Functions ──────────────────────────────────────────────
 

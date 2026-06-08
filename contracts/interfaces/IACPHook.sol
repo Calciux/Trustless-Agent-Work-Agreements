@@ -19,11 +19,7 @@ interface IACPHook {
      * @param selector The function selector of the core action
      * @param data     The calldata (excluding selector) of the core action
      */
-    function beforeAction(
-        uint256 jobId,
-        bytes4 selector,
-        bytes calldata data
-    ) external;
+    function beforeAction(uint256 jobId, bytes4 selector, bytes calldata data) external;
 
     /**
      * @notice Called after a core action executes.
@@ -31,9 +27,5 @@ interface IACPHook {
      * @param selector The function selector of the core action
      * @param data     The calldata (excluding selector) of the core action
      */
-    function afterAction(
-        uint256 jobId,
-        bytes4 selector,
-        bytes calldata data
-    ) external;
+    function afterAction(uint256 jobId, bytes4 selector, bytes calldata data) external;
 }
