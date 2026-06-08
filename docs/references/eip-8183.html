@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-8183: Agentic Commerce</title>
+      <meta property="og:title" content="ERC-8183: Agentic Commerce" />
+    
+    <meta name="description" content="Job escrow with evaluator attestation for agent commerce." />
+    <meta property="og:description" content="Job escrow with evaluator attestation for agent commerce." />
+    <meta name="twitter:description" content="Job escrow with evaluator attestation for agent commerce." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-8183" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-8183" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+  
+  <span class="h5">
+    
+    
+    
+      <span class="badge text-light bg-warning" data-bs-toggle="tooltip" data-bs-title="This EIP is not yet recommended for general use or implementation, as it is subject to normative (breaking) changes.">⚠️ Draft</span>
+    
+    
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-8183: Agentic Commerce
+    <a href="https://ethereum-magicians.org/t/erc-8183-agentic-commerce/27902" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8183.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Job escrow with evaluator attestation for agent commerce.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Davide Crapis&nbsp;(<a href="https://github.com/dcrapis">@dcrapis</a>), Bryan Lim&nbsp;(<a href="https://github.com/ai-virtual-b">@ai-virtual-b</a>), Tay Weixiong&nbsp;(<a href="https://github.com/twx-virtuals">@twx-virtuals</a>), Chooi Zuhwa&nbsp;(<a href="https://github.com/Zuhwa">@Zuhwa</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2026-02-25</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/erc-8183-agentic-commerce/27902" target="_blank" rel="noopener">https://ethereum-magicians.org/t/erc-8183-agentic-commerce/27902</a></td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-20">EIP-20</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#state-machine">State Machine</a></li>
+      <li><a href="#roles">Roles</a></li>
+      <li><a href="#job-data">Job Data</a></li>
+      <li><a href="#optional-provider-set-later">Optional provider (set later)</a></li>
+      <li><a href="#core-functions">Core Functions</a></li>
+      <li><a href="#attestation">Attestation</a></li>
+      <li><a href="#fees">Fees</a></li>
+      <li><a href="#hooks-optional">Hooks (OPTIONAL)</a></li>
+      <li><a href="#events">Events</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#extensions-optional">Extensions (OPTIONAL)</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a>
+    <ul>
+      <li><a href="#iacphooksol">IACPHook.sol</a></li>
+      <li><a href="#agenticcommercesol">AgenticCommerce.sol</a></li>
+    </ul>
+  </li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>This specification defines the <strong>Agentic Commerce Protocol</strong>: a <strong>job</strong> with escrowed budget, four states (Open → Funded → Submitted → Terminal), and an <strong>evaluator</strong> who alone may mark the job completed. The client funds the job; the provider submits work; the evaluator attests completion or rejection once submitted (or the evaluator rejects while Funded before submission, or the client rejects while Open, or the job expires and the client is refunded). Optional attestation <strong>reason</strong> (e.g. hash) on complete/reject enables audit and composition with reputation (e.g. <a href="/EIPS/eip-8004">ERC-8004</a>).</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Many use cases need only: client locks funds, provider submits work, one attester (evaluator) signals “done” and triggers payment—or client rejects or timeout triggers refund. The Agentic Commerce Protocol specifies that minimal surface so implementations stay small and composable. The evaluator can be the client (e.g. <code class="language-plaintext highlighter-rouge">evaluator = client</code> at creation) when there is no third-party attester.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “NOT RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119 and RFC 8174.</p>
+  
+    <h3 id="state-machine">
+      
+      
+        <a href="#state-machine" class="anchor-link"></a> State Machine
+      
+      
+    </h3>
+
+<p>A <strong>job</strong> has exactly one of six states:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>State</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Open</strong></td>
+      <td>Created; budget not yet set or not yet funded. Client may set budget, then fund or reject.</td>
+    </tr>
+    <tr>
+      <td><strong>Funded</strong></td>
+      <td>Budget escrowed. Provider may submit work; evaluator may reject. After <code class="language-plaintext highlighter-rouge">expiredAt</code>, anyone may trigger refund.</td>
+    </tr>
+    <tr>
+      <td><strong>Submitted</strong></td>
+      <td>Provider has submitted work. Only evaluator may complete or reject. After <code class="language-plaintext highlighter-rouge">expiredAt</code>, anyone may trigger refund.</td>
+    </tr>
+    <tr>
+      <td><strong>Completed</strong></td>
+      <td>Terminal. Escrow released to provider (minus optional platform fee).</td>
+    </tr>
+    <tr>
+      <td><strong>Rejected</strong></td>
+      <td>Terminal. Escrow refunded to client.</td>
+    </tr>
+    <tr>
+      <td><strong>Expired</strong></td>
+      <td>Terminal. Same as Rejected; escrow refunded to client.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Allowed transitions:</p>
+
+<ul>
+  <li><strong>Open → Funded</strong>: Client or provider calls <code class="language-plaintext highlighter-rouge">setBudget(jobId, amount)</code> to agree on price, then client calls <code class="language-plaintext highlighter-rouge">fund(jobId, expectedBudget)</code>; contract pulls <code class="language-plaintext highlighter-rouge">job.budget</code> from client into escrow.</li>
+  <li><strong>Open → Rejected</strong>: Client calls <code class="language-plaintext highlighter-rouge">reject(jobId, reason?)</code>.</li>
+  <li><strong>Funded → Submitted</strong>: Provider calls <code class="language-plaintext highlighter-rouge">submit(jobId, deliverable)</code>; signals that work has been completed and is ready for evaluation.</li>
+  <li><strong>Funded → Rejected</strong>: Evaluator calls <code class="language-plaintext highlighter-rouge">reject(jobId, reason?)</code>; contract refunds client.</li>
+  <li><strong>Funded → Expired</strong>: When <code class="language-plaintext highlighter-rouge">block.timestamp &gt;= job.expiredAt</code>, anyone (or client) may call <code class="language-plaintext highlighter-rouge">claimRefund(jobId)</code>; contract sets state to Expired and refunds client.</li>
+  <li><strong>Submitted → Completed</strong>: Evaluator calls <code class="language-plaintext highlighter-rouge">complete(jobId, reason?)</code>; contract distributes escrow to provider (and optional fee to treasury).</li>
+  <li><strong>Submitted → Rejected</strong>: Evaluator calls <code class="language-plaintext highlighter-rouge">reject(jobId, reason?)</code>; contract refunds client.</li>
+  <li><strong>Submitted → Expired</strong>: When <code class="language-plaintext highlighter-rouge">block.timestamp &gt;= job.expiredAt</code>, anyone (or client) may call <code class="language-plaintext highlighter-rouge">claimRefund(jobId)</code>; contract sets state to Expired and refunds client.</li>
+</ul>
+
+<p>No other transitions are valid.</p>
+  
+    <h3 id="roles">
+      
+      
+        <a href="#roles" class="anchor-link"></a> Roles
+      
+      
+    </h3>
+
+<ul>
+  <li><strong>Client</strong>: Creates job (with description), may set provider via <code class="language-plaintext highlighter-rouge">setProvider(jobId, provider)</code> when job was created with no provider, sets budget with <code class="language-plaintext highlighter-rouge">setBudget(jobId, amount)</code>, funds escrow with <code class="language-plaintext highlighter-rouge">fund(jobId, expectedBudget)</code>, may reject <strong>only when status is Open</strong>. Receives refund on Rejected/Expired.</li>
+  <li><strong>Provider</strong>: Set at creation or later via <code class="language-plaintext highlighter-rouge">setProvider</code>. May call <code class="language-plaintext highlighter-rouge">setBudget(jobId, amount)</code> to propose or negotiate a price. Calls <code class="language-plaintext highlighter-rouge">submit(jobId, deliverable)</code> when work is done to move the job from Funded to Submitted for evaluation. Receives payment when job is Completed. Does not call <code class="language-plaintext highlighter-rouge">complete</code> or <code class="language-plaintext highlighter-rouge">reject</code>.</li>
+  <li><strong>Evaluator</strong>: Single address per job, set at creation. When status is Submitted, <strong>only</strong> the evaluator MAY call <code class="language-plaintext highlighter-rouge">complete(jobId, reason?)</code> or <code class="language-plaintext highlighter-rouge">reject(jobId, reason?)</code>. When status is Funded, the evaluator MAY call <code class="language-plaintext highlighter-rouge">reject(jobId, reason?)</code> (before submission). MAY be the client (e.g. <code class="language-plaintext highlighter-rouge">evaluator = client</code>) so the client can complete or reject the job without a third party, or MAY be a <strong>smart contract</strong> that performs arbitrary checks (e.g. verifying a zero‑knowledge proof or aggregating off‑chain signals) before deciding whether to call <code class="language-plaintext highlighter-rouge">complete</code> or <code class="language-plaintext highlighter-rouge">reject</code> on the job.</li>
+</ul>
+  
+    <h3 id="job-data">
+      
+      
+        <a href="#job-data" class="anchor-link"></a> Job Data
+      
+      
+    </h3>
+
+<p>Each job SHALL have at least:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">client</code>, <code class="language-plaintext highlighter-rouge">provider</code>, <code class="language-plaintext highlighter-rouge">evaluator</code> (addresses). <strong>Provider MAY be zero at creation</strong> (see Optional provider below).</li>
+  <li><code class="language-plaintext highlighter-rouge">description</code> (string) — set at creation (e.g. job brief, scope reference).</li>
+  <li><code class="language-plaintext highlighter-rouge">budget</code> (uint256)</li>
+  <li><code class="language-plaintext highlighter-rouge">expiredAt</code> (uint256 timestamp)</li>
+  <li>
+    <table>
+      <tbody>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">status</code> (Open</td>
+          <td>Funded</td>
+          <td>Submitted</td>
+          <td>Completed</td>
+          <td>Rejected</td>
+          <td>Expired)</td>
+        </tr>
+      </tbody>
+    </table>
+  </li>
+  <li><code class="language-plaintext highlighter-rouge">hook</code> (address) — OPTIONAL. External hook contract called before and after core functions (see Hooks below). MAY be <code class="language-plaintext highlighter-rouge">address(0)</code> (no hook).</li>
+</ul>
+
+<p>Payment SHALL use a single <a href="/EIPS/eip-20">ERC-20</a> token (global for the contract or specified at creation). Implementations MAY support a per-job token; the specification only requires one token per contract.</p>
+  
+    <h3 id="optional-provider-set-later">
+      
+      
+        <a href="#optional-provider-set-later" class="anchor-link"></a> Optional provider (set later)
+      
+      
+    </h3>
+
+<p>Jobs MAY be created <strong>without a provider</strong> by passing <code class="language-plaintext highlighter-rouge">provider = address(0)</code> to <code class="language-plaintext highlighter-rouge">createJob</code>. In that case the client SHALL set the provider later via <code class="language-plaintext highlighter-rouge">setProvider(jobId, provider)</code> before funding. This supports flows such as bidding or assignment after creation.</p>
+
+<ul>
+  <li><strong>setProvider(jobId, provider)</strong><br />
+Called by <strong>client</strong> only. SHALL revert if job is not Open, current <code class="language-plaintext highlighter-rouge">job.provider != address(0)</code>, or <code class="language-plaintext highlighter-rouge">provider == address(0)</code>. SHALL set <code class="language-plaintext highlighter-rouge">job.provider = provider</code> and SHALL emit an event (e.g. ProviderSet). Implementations MAY allow an operator role to call setProvider in the future; this specification only requires client-only for the minimal protocol.</li>
+  <li><strong>fund(jobId, expectedBudget)</strong>
+SHALL revert if <code class="language-plaintext highlighter-rouge">job.provider == address(0)</code> (provider MUST be set before funding) or if <code class="language-plaintext highlighter-rouge">job.budget != expectedBudget</code> (front-running protection).</li>
+</ul>
+  
+    <h3 id="core-functions">
+      
+      
+        <a href="#core-functions" class="anchor-link"></a> Core Functions
+      
+      
+    </h3>
+
+<ul>
+  <li><strong>createJob(provider, evaluator, expiredAt, description, hook?)</strong>
+Called by client. Creates job in Open with <code class="language-plaintext highlighter-rouge">client = msg.sender</code>, <code class="language-plaintext highlighter-rouge">provider</code>, <code class="language-plaintext highlighter-rouge">evaluator</code>, <code class="language-plaintext highlighter-rouge">expiredAt</code>, <code class="language-plaintext highlighter-rouge">description</code>, and optional <code class="language-plaintext highlighter-rouge">hook</code> address. SHALL revert if <code class="language-plaintext highlighter-rouge">evaluator</code> is zero or <code class="language-plaintext highlighter-rouge">expiredAt</code> is not in the future. <strong>Provider MAY be zero</strong>; if so, client MUST call <code class="language-plaintext highlighter-rouge">setProvider</code> before <code class="language-plaintext highlighter-rouge">fund</code>. <code class="language-plaintext highlighter-rouge">hook</code> MAY be <code class="language-plaintext highlighter-rouge">address(0)</code> (no hook). Returns <code class="language-plaintext highlighter-rouge">jobId</code>.</li>
+  <li><strong>setProvider(jobId, provider, optParams?)</strong>
+Called by client. SHALL revert if job is not Open, current <code class="language-plaintext highlighter-rouge">job.provider != address(0)</code>, or <code class="language-plaintext highlighter-rouge">provider == address(0)</code>. SHALL set <code class="language-plaintext highlighter-rouge">job.provider = provider</code>. <code class="language-plaintext highlighter-rouge">optParams</code> (bytes, OPTIONAL) is forwarded to the hook contract if set (see Hooks).</li>
+  <li><strong>setBudget(jobId, amount, optParams?)</strong>
+Called by client or provider. Sets <code class="language-plaintext highlighter-rouge">job.budget = amount</code>. SHALL revert if job is not Open or caller is not client or provider. <code class="language-plaintext highlighter-rouge">optParams</code> forwarded to hook if set.</li>
+  <li><strong>fund(jobId, expectedBudget, optParams?)</strong>
+Called by client. SHALL revert if job is not Open, caller is not client, budget is zero, <strong>provider is not set</strong> (<code class="language-plaintext highlighter-rouge">job.provider == address(0)</code>), or <code class="language-plaintext highlighter-rouge">job.budget != expectedBudget</code> (front-running protection). SHALL transfer <code class="language-plaintext highlighter-rouge">job.budget</code> of the payment token from client to the contract (escrow) and set status to Funded. <code class="language-plaintext highlighter-rouge">optParams</code> forwarded to hook if set.</li>
+  <li><strong>submit(jobId, deliverable, optParams?)</strong>
+Called by provider only. SHALL revert if job is not Funded or caller is not the job’s provider. SHALL set status to Submitted. <code class="language-plaintext highlighter-rouge">deliverable</code> (<code class="language-plaintext highlighter-rouge">bytes32</code>) is a reference to submitted work (e.g. hash of off-chain deliverable, IPFS CID, attestation commitment). SHALL emit an event including <code class="language-plaintext highlighter-rouge">deliverable</code> (e.g. JobSubmitted). <code class="language-plaintext highlighter-rouge">optParams</code> forwarded to hook if set.</li>
+  <li><strong>complete(jobId, reason, optParams?)</strong>
+Called by evaluator only. SHALL revert if job is not Submitted or caller is not the job’s evaluator. SHALL set status to Completed. SHALL transfer escrowed funds to provider (minus optional platform fee to a configurable treasury). <code class="language-plaintext highlighter-rouge">reason</code> MAY be <code class="language-plaintext highlighter-rouge">bytes32(0)</code> or an attestation hash (OPTIONAL). SHALL emit an event including <code class="language-plaintext highlighter-rouge">reason</code> if provided. <code class="language-plaintext highlighter-rouge">optParams</code> forwarded to hook if set.</li>
+  <li><strong>reject(jobId, reason, optParams?)</strong>
+Called by <strong>client when job is Open</strong> or by <strong>evaluator when job is Funded or Submitted</strong>. SHALL revert if job is not Open, Funded, or Submitted, or caller is not the client (when Open) or the evaluator (when Funded or Submitted). SHALL set status to Rejected. If Funded or Submitted, SHALL refund escrow to client. <code class="language-plaintext highlighter-rouge">reason</code> OPTIONAL. SHALL emit an event including <code class="language-plaintext highlighter-rouge">reason</code> and the caller (rejector) if provided. <code class="language-plaintext highlighter-rouge">optParams</code> forwarded to hook if set.</li>
+  <li><strong>claimRefund(jobId)</strong>
+Callable when job is Funded or Submitted and the job has expired (<code class="language-plaintext highlighter-rouge">block.timestamp &gt;= expiredAt</code>). SHALL revert if job is not Funded or Submitted, or if the job has not yet expired. SHALL transfer full escrow to client and set status to Expired. MAY restrict caller (e.g. client only) or allow anyone; the specification RECOMMENDS allowing anyone to trigger refund after expiry.</li>
+</ul>
+  
+    <h3 id="attestation">
+      
+      
+        <a href="#attestation" class="anchor-link"></a> Attestation
+      
+      
+    </h3>
+
+<ul>
+  <li><strong>complete(jobId, reason, optParams?)</strong>: <code class="language-plaintext highlighter-rouge">reason</code> is an optional attestation commitment (e.g. <code class="language-plaintext highlighter-rouge">bytes32</code> hash of off-chain evidence). Implementations MAY use <code class="language-plaintext highlighter-rouge">string</code> and hash it internally. Events SHOULD include <code class="language-plaintext highlighter-rouge">reason</code> for indexing and composition with reputation systems. <code class="language-plaintext highlighter-rouge">optParams</code> forwarded to hook if set.</li>
+  <li><strong>reject(jobId, reason, optParams?)</strong>: Optional <code class="language-plaintext highlighter-rouge">reason</code> for audit; same treatment as above. <code class="language-plaintext highlighter-rouge">optParams</code> forwarded to hook if set.</li>
+</ul>
+  
+    <h3 id="fees">
+      
+      
+        <a href="#fees" class="anchor-link"></a> Fees
+      
+      
+    </h3>
+
+<p>Implementations MAY charge a <strong>platform fee</strong> (basis points) on Completed, paid to a configurable treasury. The specification does not require a fee. If present, fee SHALL be deducted only on completion (not on refund).</p>
+  
+    <h3 id="hooks-optional">
+      
+      
+        <a href="#hooks-optional" class="anchor-link"></a> Hooks (OPTIONAL)
+      
+      
+    </h3>
+
+<p>Implementations MAY support an optional <strong>hook contract</strong> per job to extend the core protocol without modifying it. The hook address is set at job creation (or <code class="language-plaintext highlighter-rouge">address(0)</code> for no hook) and stored on the job. A <strong>non‑hooked kernel</strong> that ignores the <code class="language-plaintext highlighter-rouge">hook</code> field (or always sets it to <code class="language-plaintext highlighter-rouge">address(0)</code>) is fully compliant with this specification; the reference <code class="language-plaintext highlighter-rouge">AgenticCommerce</code> contract follows this minimal pattern, while <code class="language-plaintext highlighter-rouge">AgenticCommerceHooked</code> is an <strong>extension</strong> that layers the hook callbacks on top of the same lifecycle.</p>
+
+<p>A hook contract SHALL implement the <code class="language-plaintext highlighter-rouge">IACPHook</code> interface — just two functions:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IACPHook</span> <span class="p">{</span>
+    <span class="k">function</span> <span class="n">beforeAction</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">afterAction</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">selector</code> parameter identifies which core function is being called (e.g. the function selector for <code class="language-plaintext highlighter-rouge">fund</code>). The <code class="language-plaintext highlighter-rouge">data</code> parameter contains function-specific parameters encoded as bytes (see Data encoding below). The hook uses the selector to route internally:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">beforeAction</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">selector</span> <span class="o">==</span> <span class="n">FUND_SELECTOR</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// custom pre-fund logic using data (optParams)
+</span>    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nb">selector</span> <span class="o">==</span> <span class="n">COMPLETE_SELECTOR</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// custom pre-complete logic using data (reason, optParams)
+</span>    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>When a job has a hook set, the core contract SHALL call <code class="language-plaintext highlighter-rouge">hook.beforeAction(...)</code> and <code class="language-plaintext highlighter-rouge">hook.afterAction(...)</code> around each hookable function:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Core function</th>
+      <th>Hookable</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">setProvider</code></td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">setBudget</code></td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">fund</code></td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">submit</code></td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">complete</code></td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">reject</code></td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">claimRefund</code></td>
+      <td><strong>No</strong> — permissionless safety mechanism, SHALL NOT be hookable</td>
+    </tr>
+  </tbody>
+</table>
+  
+    <h4 id="data-encoding">
+      
+      
+        <a href="#data-encoding" class="anchor-link"></a> Data encoding
+      
+      
+    </h4>
+
+<p>The <code class="language-plaintext highlighter-rouge">data</code> parameter passed to hooks contains the core function’s parameters encoded as bytes. The encoding per selector:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Core function</th>
+      <th><code class="language-plaintext highlighter-rouge">data</code> encoding</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">setProvider</code></td>
+      <td><code class="language-plaintext highlighter-rouge">abi.encode(address provider, bytes optParams)</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">setBudget</code></td>
+      <td><code class="language-plaintext highlighter-rouge">abi.encode(uint256 amount, bytes optParams)</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">fund</code></td>
+      <td><code class="language-plaintext highlighter-rouge">optParams</code> (raw bytes)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">submit</code></td>
+      <td><code class="language-plaintext highlighter-rouge">abi.encode(bytes32 deliverable, bytes optParams)</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">complete</code></td>
+      <td><code class="language-plaintext highlighter-rouge">abi.encode(bytes32 reason, bytes optParams)</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">reject</code></td>
+      <td><code class="language-plaintext highlighter-rouge">abi.encode(bytes32 reason, bytes optParams)</code></td>
+    </tr>
+  </tbody>
+</table>
+  
+    <h4 id="hook-behaviour">
+      
+      
+        <a href="#hook-behaviour" class="anchor-link"></a> Hook behaviour
+      
+      
+    </h4>
+
+<ul>
+  <li>The <code class="language-plaintext highlighter-rouge">optParams</code> field (<code class="language-plaintext highlighter-rouge">bytes</code>, OPTIONAL) on each hookable core function is an opaque payload forwarded to the hook via the <code class="language-plaintext highlighter-rouge">data</code> parameter. Callers that do not use hooks MAY pass empty bytes. The core contract SHALL NOT interpret <code class="language-plaintext highlighter-rouge">optParams</code>; it is for the hook only.</li>
+  <li><strong>Before hooks</strong> (<code class="language-plaintext highlighter-rouge">beforeAction</code>) are called before the core logic executes. A before hook MAY revert to block the action (e.g. enforce custom validation, allowlists, or preconditions).</li>
+  <li><strong>After hooks</strong> (<code class="language-plaintext highlighter-rouge">afterAction</code>) are called after the core logic completes (including state changes and token transfers). An after hook MAY perform side effects (e.g. emit events, update external state, trigger notifications) or revert to roll back the entire transaction.</li>
+  <li>If <code class="language-plaintext highlighter-rouge">job.hook == address(0)</code>, the core contract SHALL skip hook calls and execute normally.</li>
+</ul>
+  
+    <h4 id="hook-security">
+      
+      
+        <a href="#hook-security" class="anchor-link"></a> Hook security
+      
+      
+    </h4>
+
+<ul>
+  <li>Hooks are <strong>trusted</strong> contracts chosen by the client at job creation. A malicious or buggy hook can revert valid actions or execute arbitrary logic in callbacks. Clients SHOULD audit or use well-known hook implementations.</li>
+  <li><strong>Liveness:</strong> A reverting hook can block all hookable actions for that job until <code class="language-plaintext highlighter-rouge">expiredAt</code>. This is by design — the hook is part of the job’s policy. The guaranteed recovery path is <code class="language-plaintext highlighter-rouge">claimRefund</code> after expiry, which is deliberately <strong>not hookable</strong> so that refunds cannot be blocked.</li>
+  <li><strong>Atomicity:</strong> After-callbacks run after state changes but within the same transaction. If an after-callback reverts, the entire transaction (including the core state change) is rolled back. This is intentional — it enables atomic multi-step flows (e.g. escrow funding + side token transfer must both succeed or both revert).</li>
+  <li><code class="language-plaintext highlighter-rouge">onlyACP</code> modifiers on hooks are RECOMMENDED so that hook functions cannot be called directly by external actors.</li>
+  <li>Hooks SHOULD NOT be upgradeable after a job is created, as this would allow the hook to change behaviour mid-job.</li>
+  <li>Implementations MAY maintain an allowlist or registry of audited hook contracts to reduce risk for clients.</li>
+</ul>
+  
+    <h4 id="convenience-base-contract-non-normative">
+      
+      
+        <a href="#convenience-base-contract-non-normative" class="anchor-link"></a> Convenience base contract (non-normative)
+      
+      
+    </h4>
+
+<p>Implementations MAY provide a <code class="language-plaintext highlighter-rouge">BaseACPHook</code> that routes the generic <code class="language-plaintext highlighter-rouge">beforeAction</code>/<code class="language-plaintext highlighter-rouge">afterAction</code> calls to named virtual functions (e.g. <code class="language-plaintext highlighter-rouge">_preFund</code>, <code class="language-plaintext highlighter-rouge">_postComplete</code>) so hook developers only override what they need. This is NOT part of the standard — only <code class="language-plaintext highlighter-rouge">IACPHook</code> is normative.</p>
+  
+    <h4 id="example-use-cases">
+      
+      
+        <a href="#example-use-cases" class="anchor-link"></a> Example use cases
+      
+      
+    </h4>
+
+<ul>
+  <li>Pre-fund validation (e.g. KYC check, allowlist gate)</li>
+  <li>Post-complete reputation updates (e.g. writing attestations to ERC-8004)</li>
+  <li>Custom fee logic or payment splitting</li>
+  <li>Atomic side transfers (e.g. fund transfer hook)</li>
+  <li>Provider bidding (e.g. bidding hook)</li>
+</ul>
+  <hr />
+    <h4 id="example-1--fund-transfer-hook-two-phase-escrow">
+      
+      
+        <a href="#example-1--fund-transfer-hook-two-phase-escrow" class="anchor-link"></a> Example 1 — Fund Transfer Hook (two-phase escrow)
+      
+      
+    </h4>
+
+<p><strong>Problem:</strong> A client hires an agent to convert/bridge/swap tokens (e.g. USDC → DAI). The client provides capital to the provider, who uses it to produce output tokens. The hook must ensure the provider deposits the output tokens before the job completes, then release them to the designated buyer.</p>
+
+<p><strong>Solution:</strong> A <code class="language-plaintext highlighter-rouge">FundTransferHook</code> that (a) stores a transfer commitment at <code class="language-plaintext highlighter-rouge">setBudget</code>, (b) forwards capital to the provider at <code class="language-plaintext highlighter-rouge">fund</code>, (c) pulls output tokens from the provider at <code class="language-plaintext highlighter-rouge">submit</code>, and (d) releases them to the buyer at <code class="language-plaintext highlighter-rouge">complete</code>.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Step 1 — createJob
+  Client → createJob(provider, evaluator, expiredAt, desc, hook=FundTransferHook)
+  Job created (Open), hook address stored.
+
+Step 2 — setBudget
+  Client → setBudget(jobId, serviceFee, optParams=abi.encode(buyer, transferAmount))
+    → hook.beforeAction: decode optParams, store {buyer, transferAmount} as commitment.
+    → core: job.budget = serviceFee
+
+Step 3 — fund
+  Client approves: core contract for serviceFee, hook for transferAmount.
+  Client → fund(jobId, serviceFee, "")
+    → hook.beforeAction: verify client approved hook for transferAmount. Revert if not.
+    → core: pull serviceFee into escrow, set Funded.
+    → hook.afterAction: pull transferAmount from client, forward to provider (capital).
+
+Step 4 — provider uses capital to produce output tokens
+
+Step 5 — submit
+  Provider approves hook for transferAmount (output tokens).
+  Provider → submit(jobId, deliverable, "")
+    → hook.beforeAction: pull transferAmount from provider into hook (escrow).
+    → core: set Submitted.
+
+Step 6 — complete
+  Evaluator → complete(jobId, reason, "")
+    → core: release serviceFee to provider (minus platform fee).
+    → hook.afterAction: release transferAmount from hook to buyer.
+
+Recovery:
+  - reject: hook.afterAction returns escrowed tokens to provider (if deposited).
+  - expiry: claimRefund (not hookable) refunds serviceFee to client.
+    Provider calls recoverTokens(jobId) on hook to recover deposited tokens.
+</code></pre></div></div>
+
+<p><strong>Key properties:</strong> (1) The provider cannot submit without depositing output tokens. (2) The buyer only receives tokens when the evaluator completes the job. (3) On rejection or expiry, tokens are returned to the provider.</p>
+  <hr />
+    <h4 id="example-2--bidding-hook">
+      
+      
+        <a href="#example-2--bidding-hook" class="anchor-link"></a> Example 2 — Bidding Hook
+      
+      
+    </h4>
+
+<p><strong>Problem:</strong> A client wants to hire the cheapest (or best) agent for a job but does not know upfront who to assign. The selection should be determined by an open bidding process, not unilaterally by the client after the fact.</p>
+
+<p><strong>Solution:</strong> A <code class="language-plaintext highlighter-rouge">BiddingHook</code> that verifies off-chain signed bids. Providers sign bid commitments off-chain; the client collects bids, selects the winner, and submits the winning bid’s signature via <code class="language-plaintext highlighter-rouge">setProvider</code>. The hook’s <code class="language-plaintext highlighter-rouge">beforeAction</code> callback recovers the signer and verifies it matches the chosen provider — proving the provider actually committed to that price.</p>
+
+<p>Zero direct calls to the hook. All interactions flow through the core contract → hook callbacks.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Step 1 — createJob
+  Client → createJob(provider=0, evaluator, expiredAt, desc, hook=BiddingHook)
+  Job created (Open), provider = address(0).
+
+Step 2 — setBudget (opens bidding via hook callback)
+  Client → setBudget(jobId, maxBudget, optParams=abi.encode(biddingDeadline))
+    → hook.beforeAction: store deadline for this jobId.
+
+Step 3 — bidding happens OFF-CHAIN
+  Providers sign: keccak256(abi.encode(chainId, hookAddress, jobId, bidAmount))
+  Client collects signed bids and selects the winner.
+  Core contract is unaware of bids.
+
+Step 4 — setProvider + setBudget (hook verifies winning bid signature and enforces budget)
+  Client → setProvider(jobId, winnerAddress, optParams=abi.encode(bidAmount, signature))
+    → hook.beforeAction: verify deadline passed, recover signer from signature,
+      validate signer == provider, store committed bidAmount. Revert if invalid.
+    → core: job.provider = winnerAddress
+    → hook.afterAction: mark bidding finalised (no further setProvider possible).
+  Client → setBudget(jobId, bidAmount, "")
+    → hook.beforeAction: enforce budget == committedAmount. Revert if mismatch.
+
+Step 5 — job continues normally
+  Client → fund(jobId, bidAmount, "")
+  Provider → submit(jobId, deliverable, "")
+  Evaluator → complete(jobId, reason, "")
+</code></pre></div></div>
+
+<p><strong>Key property:</strong> The client cannot fabricate a provider commitment. The hook verifies the chosen provider actually signed a bid at the claimed price. The client is incentivised to pick the lowest bidder since they are the one paying.</p>
+  <hr />
+    <h3 id="events">
+      
+      
+        <a href="#events" class="anchor-link"></a> Events
+      
+      
+    </h3>
+
+<p>Implementations SHOULD emit at least:</p>
+
+<ul>
+  <li><strong>JobCreated</strong>(jobId, client, provider, evaluator, expiredAt)</li>
+  <li><strong>ProviderSet</strong>(jobId, provider) — when provider is set on a job that was created without one</li>
+  <li><strong>BudgetSet</strong>(jobId, amount)</li>
+  <li><strong>JobFunded</strong>(jobId, client, amount)</li>
+  <li><strong>JobSubmitted</strong>(jobId, provider, deliverable) — when provider submits work for evaluation</li>
+  <li><strong>JobCompleted</strong>(jobId, evaluator, reason)</li>
+  <li><strong>JobRejected</strong>(jobId, rejector, reason)</li>
+  <li><strong>JobExpired</strong>(jobId)</li>
+  <li><strong>PaymentReleased</strong>(jobId, provider, amount)</li>
+  <li><strong>Refunded</strong>(jobId, client, amount)</li>
+</ul>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<ul>
+  <li><strong>Single attester after submission</strong>: Once Submitted, only the evaluator can complete or reject; the client cannot pull funds back unilaterally, so the provider is protected after starting work. Evaluator = client covers the “no third party” case.</li>
+  <li><strong>Explicit submission</strong>: The Submitted state gives the evaluator (and indexers/UIs) a clear signal that the provider considers work done and ready for evaluation, separating “funded and in progress” from “work delivered”.</li>
+  <li><strong>Minimal surface</strong>: Attestation is the optional <code class="language-plaintext highlighter-rouge">reason</code> on complete/reject; no additional ledger is required.</li>
+  <li><strong>Four states</strong>: Open, Funded, Submitted, and Terminal (Completed, Rejected, or Expired) are enough for “fund → work → submit → evaluate or refund”.</li>
+  <li><strong>Expiry</strong>: Refund after <code class="language-plaintext highlighter-rouge">expiredAt</code> gives client a way to reclaim funds without an explicit reject.</li>
+  <li><strong>Hooks over inheritance</strong>: Optional hook contracts let integrators extend the protocol (validation, reputation, fees) without modifying or inheriting from the core contract. The core stays minimal; complexity lives in the hook.</li>
+  <li><strong>Generic hook interface</strong>: The <code class="language-plaintext highlighter-rouge">IACPHook</code> interface uses just two functions (<code class="language-plaintext highlighter-rouge">beforeAction</code>/<code class="language-plaintext highlighter-rouge">afterAction</code>) with a selector parameter rather than named functions per action. This keeps the interface stable as the core protocol evolves — new hookable functions simply produce new selector values without changing the interface.</li>
+</ul>
+  
+    <h3 id="extensions-optional">
+      
+      
+        <a href="#extensions-optional" class="anchor-link"></a> Extensions (OPTIONAL)
+      
+      
+    </h3>
+
+<p>The following extensions are OPTIONAL and do not modify the core protocol. Implementations MAY adopt them independently.</p>
+  
+    <h4 id="reputation--attestation-interop-erc-8004">
+      
+      
+        <a href="#reputation--attestation-interop-erc-8004" class="anchor-link"></a> Reputation / Attestation Interop (ERC-8004)
+      
+      
+    </h4>
+
+<p>Agentic Commerce is intentionally minimal and does not embed a reputation system. For on-chain reputation and trust relationships between agents, implementations are RECOMMENDED to integrate with <a href="/EIPS/eip-8004">ERC-8004</a> (Trustless Agents).</p>
+
+<p>The following patterns are RECOMMENDED:</p>
+
+<ul>
+  <li><strong>Outcome‑based trust signals</strong>
+    <ul>
+      <li>Each job outcome SHOULD be mapped into a trust signal for the participants:
+        <ul>
+          <li><code class="language-plaintext highlighter-rouge">Completed</code>: positive signal for provider (and optionally evaluator) based on successful delivery.</li>
+          <li><code class="language-plaintext highlighter-rouge">Rejected</code>: negative or neutral signal, depending on the reason and who rejected (client vs evaluator).</li>
+          <li><code class="language-plaintext highlighter-rouge">Expired</code>: neutral or mildly negative signal for client (for not evaluating) or for provider (for not submitting), depending on higher‑level policy.</li>
+        </ul>
+      </li>
+      <li>Implementations MAY emit ERC‑8004 compatible events or call ERC‑8004 registries when a job reaches a terminal state.</li>
+    </ul>
+  </li>
+  <li><strong>Evaluator attestations</strong>
+    <ul>
+      <li>On <code class="language-plaintext highlighter-rouge">complete(jobId, reason, optParams?)</code> and <code class="language-plaintext highlighter-rouge">reject(jobId, reason, optParams?)</code>, the evaluator (which MAY be a contract) SHOULD:
+        <ul>
+          <li>produce an attestation or structured log that can be added to the ERC‑8004 <strong>reputation registry</strong> as feedback (e.g. “provider successfully completed job”, “job rejected for reason X”). Attestations MAY reference the job, parties, and <code class="language-plaintext highlighter-rouge">reason</code> (e.g. a hash of off‑chain evidence).</li>
+          <li>and/or post a proof to the ERC‑8004 <strong>validation registry</strong>, which a hook (or evaluator contract) then reads in order to decide whether to mark the job as <code class="language-plaintext highlighter-rouge">Completed</code> or <code class="language-plaintext highlighter-rouge">Rejected</code>.</li>
+        </ul>
+      </li>
+      <li>Hooks MAY be used to call into ERC‑8004 registries in <code class="language-plaintext highlighter-rouge">afterAction</code> for <code class="language-plaintext highlighter-rouge">complete</code>/<code class="language-plaintext highlighter-rouge">reject</code>, keeping the core ACP contract unaware of the registry details.</li>
+    </ul>
+  </li>
+  <li><strong>Reputation‑aware policy via hooks</strong>
+    <ul>
+      <li>Hooks MAY consult ERC‑8004 data before allowing certain actions, for example:
+        <ul>
+          <li>preventing <code class="language-plaintext highlighter-rouge">setProvider</code> from assigning providers below a reputation threshold,</li>
+          <li>enforcing higher budgets or additional safeguards for low‑reputation agents,</li>
+          <li>dynamically selecting evaluators based on reputation.</li>
+        </ul>
+      </li>
+      <li>Such checks belong in policy‑oriented <code class="language-plaintext highlighter-rouge">beforeAction</code> hooks so they can safely revert and block actions that violate reputation policies.</li>
+    </ul>
+  </li>
+  <li><strong>Separation of concerns</strong>
+    <ul>
+      <li>ACP remains the <strong>payment and escrow</strong> layer; ERC‑8004 is the <strong>identity and reputation</strong> layer.</li>
+      <li>Interop is achieved by:
+        <ul>
+          <li>emitting events that ERC‑8004 indexers can consume, and/or</li>
+          <li>calling ERC‑8004 contracts from hooks or evaluator contracts.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+  <hr />
+    <h4 id="meta-transactions--facilitator-relay-erc-2771">
+      
+      
+        <a href="#meta-transactions--facilitator-relay-erc-2771" class="anchor-link"></a> Meta-Transactions / Facilitator Relay (<a href="/EIPS/eip-2771">ERC-2771</a>)
+      
+      
+    </h4>
+
+<p>To support gasless execution — where a client, provider, or evaluator signs an intent off-chain and a <strong>facilitator</strong> submits the transaction on their behalf — implementations SHOULD support <a href="/EIPS/eip-2771">ERC-2771</a> (Secure Protocol for Native Meta Transactions).</p>
+
+<p><strong>How it works:</strong></p>
+
+<ol>
+  <li>A participant (client, provider, or evaluator) signs a meta-transaction off-chain (e.g. <code class="language-plaintext highlighter-rouge">createJob</code>, <code class="language-plaintext highlighter-rouge">fund</code>, <code class="language-plaintext highlighter-rouge">submit</code>).</li>
+  <li>A facilitator submits the signed payload to a <strong>trusted forwarder</strong> contract.</li>
+  <li>The forwarder verifies the signature and calls the ACP contract, appending the original signer’s address.</li>
+  <li>The ACP contract uses <code class="language-plaintext highlighter-rouge">_msgSender()</code> (from <code class="language-plaintext highlighter-rouge">ERC2771Context</code>) instead of <code class="language-plaintext highlighter-rouge">msg.sender</code> to identify the caller.</li>
+</ol>
+
+<p><strong>Implementation requirements:</strong></p>
+
+<ul>
+  <li>The ACP contract SHALL inherit <code class="language-plaintext highlighter-rouge">ERC2771Context</code> (or equivalent) and use <code class="language-plaintext highlighter-rouge">_msgSender()</code> for all authorization checks (<code class="language-plaintext highlighter-rouge">client</code>, <code class="language-plaintext highlighter-rouge">provider</code>, <code class="language-plaintext highlighter-rouge">evaluator</code>).</li>
+  <li>All role checks (e.g. “caller is client”, “caller is provider”) SHALL use <code class="language-plaintext highlighter-rouge">_msgSender()</code> rather than <code class="language-plaintext highlighter-rouge">msg.sender</code>.</li>
+  <li>The trusted forwarder address SHALL be set at deployment and SHOULD be immutable.</li>
+</ul>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span><span class="n">ERC2771Context</span><span class="p">}</span> <span class="n">from</span> <span class="s">"@openzeppelin/contracts/metatx/ERC2771Context.sol"</span><span class="p">;</span>
+
+<span class="k">contract</span> <span class="n">AgenticCommerce</span> <span class="k">is</span> <span class="n">ERC2771Context</span><span class="p">,</span> <span class="p">...</span> <span class="p">{</span>
+    <span class="k">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">trustedForwarder</span><span class="p">,</span> <span class="p">...)</span>
+        <span class="n">ERC2771Context</span><span class="p">(</span><span class="n">trustedForwarder</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+
+    <span class="c1">// Example: fund() using _msgSender() instead of msg.sender
+</span>    <span class="k">function</span> <span class="n">fund</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">expectedBudget</span><span class="p">)</span> <span class="k">external</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">_msgSender</span><span class="p">()</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">budget</span> <span class="o">!=</span> <span class="n">expectedBudget</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">BudgetMismatch</span><span class="p">();</span>
+        <span class="c1">// ...
+</span>    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Token approvals:</strong> For functions that pull tokens (e.g. <code class="language-plaintext highlighter-rouge">fund</code>), the signer SHOULD use <a href="/EIPS/eip-2612">ERC-2612</a> (<code class="language-plaintext highlighter-rouge">permit</code>) to approve token spending via signature. The facilitator can then call <code class="language-plaintext highlighter-rouge">permit</code> and <code class="language-plaintext highlighter-rouge">fund</code> in a single transaction — no on-chain approval tx needed from the signer.</p>
+
+<p><strong>x402 compatibility:</strong> This extension enables compatibility with HTTP-native payment protocols such as x402, where an AI agent signs payment intents off-chain and a payment facilitator handles on-chain execution. The agent only needs a private key and tokens — no gas, no RPC management, no chain-specific logic.</p>
+  <hr />
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>No backward compatibility issues found.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<p>The reference implementation consists of two contracts: <code class="language-plaintext highlighter-rouge">IACPHook</code>, the optional and minimal hook interface that developers implement, and <code class="language-plaintext highlighter-rouge">AgenticCommerce</code>, the core Job primitive with escrow and optional hook extension points.</p>
+  
+    <h3 id="iacphooksol">
+      
+      
+        <a href="#iacphooksol" class="anchor-link"></a> IACPHook.sol
+      
+      
+    </h3>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">pragma</span> <span class="n">solidity</span> <span class="o">^</span><span class="mf">0.8</span><span class="p">.</span><span class="mi">20</span><span class="p">;</span>
+
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts/utils/introspection/IERC165.sol"</span><span class="p">;</span>
+
+<span class="k">interface</span> <span class="n">IACPHook</span> <span class="k">is</span> <span class="n">IERC165</span> <span class="p">{</span>
+    <span class="k">function</span> <span class="n">beforeAction</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">afterAction</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h3 id="agenticcommercesol">
+      
+      
+        <a href="#agenticcommercesol" class="anchor-link"></a> AgenticCommerce.sol
+      
+      
+    </h3>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">pragma</span> <span class="n">solidity</span> <span class="o">^</span><span class="mf">0.8</span><span class="p">.</span><span class="mi">28</span><span class="p">;</span>
+
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts/token/ERC20/IERC20.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"./IACPHook.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts/utils/introspection/ERC165Checker.sol"</span><span class="p">;</span>
+
+<span class="k">contract</span> <span class="n">AgenticCommerce</span> <span class="k">is</span> <span class="n">Initializable</span><span class="p">,</span> <span class="n">AccessControlUpgradeable</span><span class="p">,</span> <span class="n">ReentrancyGuardTransient</span><span class="p">,</span> <span class="n">UUPSUpgradeable</span> <span class="p">{</span>
+    <span class="k">using</span> <span class="n">SafeERC20</span> <span class="k">for</span> <span class="n">IERC20</span><span class="p">;</span>
+
+    <span class="kt">bytes32</span> <span class="k">public</span> <span class="k">constant</span> <span class="n">ADMIN_ROLE</span> <span class="o">=</span> <span class="nb">keccak256</span><span class="p">(</span><span class="s">"ADMIN_ROLE"</span><span class="p">);</span>
+
+    <span class="k">enum</span> <span class="n">JobStatus</span> <span class="p">{</span>
+        <span class="n">Open</span><span class="p">,</span>
+        <span class="n">Funded</span><span class="p">,</span>
+        <span class="n">Submitted</span><span class="p">,</span>
+        <span class="n">Completed</span><span class="p">,</span>
+        <span class="n">Rejected</span><span class="p">,</span>
+        <span class="n">Expired</span>
+    <span class="p">}</span>
+
+    <span class="k">struct</span> <span class="n">Job</span> <span class="p">{</span>
+        <span class="kt">uint256</span> <span class="n">id</span><span class="p">;</span>
+        <span class="kt">address</span> <span class="n">client</span><span class="p">;</span>
+        <span class="kt">address</span> <span class="n">provider</span><span class="p">;</span>
+        <span class="kt">address</span> <span class="n">evaluator</span><span class="p">;</span>
+        <span class="kt">string</span> <span class="n">description</span><span class="p">;</span>
+        <span class="kt">uint256</span> <span class="n">budget</span><span class="p">;</span>
+        <span class="kt">uint256</span> <span class="n">expiredAt</span><span class="p">;</span>
+        <span class="n">JobStatus</span> <span class="n">status</span><span class="p">;</span>
+        <span class="kt">address</span> <span class="n">hook</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">IERC20</span> <span class="k">public</span> <span class="n">paymentToken</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="k">public</span> <span class="n">platformFeeBP</span><span class="p">;</span>
+    <span class="kt">address</span> <span class="k">public</span> <span class="n">platformTreasury</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="k">public</span> <span class="n">evaluatorFeeBP</span><span class="p">;</span>
+
+    <span class="k">mapping</span><span class="p">(</span><span class="kt">uint256</span> <span class="o">=&gt;</span> <span class="n">Job</span><span class="p">)</span> <span class="k">public</span> <span class="n">jobs</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="k">public</span> <span class="n">jobCounter</span><span class="p">;</span>
+    <span class="k">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kt">bool</span><span class="p">)</span> <span class="k">public</span> <span class="n">whitelistedHooks</span><span class="p">;</span>
+    <span class="k">mapping</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span> <span class="o">=&gt;</span> <span class="kt">bool</span> <span class="n">hasBudget</span><span class="p">)</span> <span class="k">public</span> <span class="n">jobHasBudget</span><span class="p">;</span>
+
+    <span class="k">event</span> <span class="n">JobCreated</span><span class="p">(</span>
+        <span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">client</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">provider</span><span class="p">,</span>
+        <span class="kt">address</span> <span class="n">evaluator</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">expiredAt</span><span class="p">,</span> <span class="kt">address</span> <span class="n">hook</span>
+    <span class="p">);</span>
+    <span class="k">event</span> <span class="n">ProviderSet</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">provider</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">BudgetSet</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">JobFunded</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">client</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">JobSubmitted</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">provider</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">deliverable</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">JobCompleted</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">evaluator</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">reason</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">JobRejected</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">rejector</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">reason</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">JobExpired</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">PaymentReleased</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">provider</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">EvaluatorFeePaid</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">evaluator</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">Refunded</span><span class="p">(</span><span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">client</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">HookWhitelistUpdated</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">hook</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">status</span><span class="p">);</span>
+
+    <span class="n">error</span> <span class="n">InvalidJob</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">WrongStatus</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">Unauthorized</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">ExpiryTooShort</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">ZeroBudget</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">ProviderNotSet</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">FeesTooHigh</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">HookNotWhitelisted</span><span class="p">();</span>
+
+    <span class="c1">/// @custom:oz-upgrades-unsafe-allow constructor
+</span>    <span class="k">constructor</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">_disableInitializers</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">initialize</span><span class="p">(</span><span class="kt">address</span> <span class="n">paymentToken_</span><span class="p">,</span> <span class="kt">address</span> <span class="n">treasury_</span><span class="p">)</span> <span class="k">public</span> <span class="n">initializer</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">paymentToken_</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">||</span> <span class="n">treasury_</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="nb">revert</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+
+        <span class="n">__AccessControl_init</span><span class="p">();</span>
+
+        <span class="n">paymentToken</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">paymentToken_</span><span class="p">);</span>
+        <span class="n">platformTreasury</span> <span class="o">=</span> <span class="n">treasury_</span><span class="p">;</span>
+        <span class="n">_grantRole</span><span class="p">(</span><span class="n">DEFAULT_ADMIN_ROLE</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">);</span>
+        <span class="n">_grantRole</span><span class="p">(</span><span class="n">ADMIN_ROLE</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">);</span>
+        <span class="n">whitelistedHooks</span><span class="p">[</span><span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">_authorizeUpgrade</span><span class="p">(</span><span class="kt">address</span> <span class="n">newImplementation</span><span class="p">)</span> <span class="k">internal</span> <span class="k">override</span> <span class="n">onlyRole</span><span class="p">(</span><span class="n">DEFAULT_ADMIN_ROLE</span><span class="p">)</span> <span class="p">{}</span>
+
+    <span class="c1">// ──────────────────── Admin ────────────────────
+</span>
+    <span class="k">function</span> <span class="n">setPlatformFee</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">feeBP_</span><span class="p">,</span> <span class="kt">address</span> <span class="n">treasury_</span><span class="p">)</span> <span class="k">external</span> <span class="n">onlyRole</span><span class="p">(</span><span class="n">ADMIN_ROLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">treasury_</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">feeBP_</span> <span class="o">+</span> <span class="n">evaluatorFeeBP</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">FeesTooHigh</span><span class="p">();</span>
+        <span class="n">platformFeeBP</span> <span class="o">=</span> <span class="n">feeBP_</span><span class="p">;</span>
+        <span class="n">platformTreasury</span> <span class="o">=</span> <span class="n">treasury_</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">setEvaluatorFee</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">feeBP_</span><span class="p">)</span> <span class="k">external</span> <span class="n">onlyRole</span><span class="p">(</span><span class="n">ADMIN_ROLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">feeBP_</span> <span class="o">+</span> <span class="n">platformFeeBP</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">FeesTooHigh</span><span class="p">();</span>
+        <span class="n">evaluatorFeeBP</span> <span class="o">=</span> <span class="n">feeBP_</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">setHookWhitelist</span><span class="p">(</span><span class="kt">address</span> <span class="n">hook</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">status</span><span class="p">)</span> <span class="k">external</span> <span class="n">onlyRole</span><span class="p">(</span><span class="n">ADMIN_ROLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">hook</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+        <span class="n">whitelistedHooks</span><span class="p">[</span><span class="n">hook</span><span class="p">]</span> <span class="o">=</span> <span class="n">status</span><span class="p">;</span>
+        <span class="k">emit</span> <span class="n">HookWhitelistUpdated</span><span class="p">(</span><span class="n">hook</span><span class="p">,</span> <span class="n">status</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ──────────────────── Hook Helpers ────────────────────
+</span>
+    <span class="k">function</span> <span class="n">_beforeHook</span><span class="p">(</span><span class="kt">address</span> <span class="n">hook</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span><span class="p">)</span> <span class="k">internal</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">hook</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+            <span class="n">IACPHook</span><span class="p">(</span><span class="n">hook</span><span class="p">).</span><span class="n">beforeAction</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="nb">selector</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">_afterHook</span><span class="p">(</span><span class="kt">address</span> <span class="n">hook</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span><span class="p">)</span> <span class="k">internal</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">hook</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+            <span class="n">IACPHook</span><span class="p">(</span><span class="n">hook</span><span class="p">).</span><span class="n">afterAction</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="nb">selector</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ──────────────────── Job Lifecycle ────────────────────
+</span>
+    <span class="k">function</span> <span class="n">createJob</span><span class="p">(</span>
+        <span class="kt">address</span> <span class="n">provider</span><span class="p">,</span> <span class="kt">address</span> <span class="n">evaluator</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">expiredAt</span><span class="p">,</span>
+        <span class="kt">string</span> <span class="k">calldata</span> <span class="n">description</span><span class="p">,</span> <span class="kt">address</span> <span class="n">hook</span>
+    <span class="p">)</span> <span class="k">external</span> <span class="n">nonReentrant</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">evaluator</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">expiredAt</span> <span class="o">&lt;=</span> <span class="n">block</span><span class="p">.</span><span class="n">timestamp</span> <span class="o">+</span> <span class="mi">5</span> <span class="kc">minutes</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">ExpiryTooShort</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">whitelistedHooks</span><span class="p">[</span><span class="n">hook</span><span class="p">])</span> <span class="nb">revert</span> <span class="n">HookNotWhitelisted</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">hook</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ERC165Checker</span><span class="p">.</span><span class="n">supportsInterface</span><span class="p">(</span><span class="n">hook</span><span class="p">,</span> <span class="k">type</span><span class="p">(</span><span class="n">IACPHook</span><span class="p">).</span><span class="n">interfaceId</span><span class="p">))</span>
+                <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="kt">uint256</span> <span class="n">jobId</span> <span class="o">=</span> <span class="o">++</span><span class="n">jobCounter</span><span class="p">;</span>
+        <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">]</span> <span class="o">=</span> <span class="n">Job</span><span class="p">({</span>
+            <span class="n">id</span><span class="o">:</span> <span class="n">jobId</span><span class="p">,</span>
+            <span class="n">client</span><span class="o">:</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span>
+            <span class="n">provider</span><span class="o">:</span> <span class="n">provider</span><span class="p">,</span>
+            <span class="n">evaluator</span><span class="o">:</span> <span class="n">evaluator</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="n">budget</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">expiredAt</span><span class="o">:</span> <span class="n">expiredAt</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">:</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Open</span><span class="p">,</span>
+            <span class="n">hook</span><span class="o">:</span> <span class="n">hook</span>
+        <span class="p">});</span>
+
+        <span class="k">emit</span> <span class="n">JobCreated</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">provider</span><span class="p">,</span> <span class="n">evaluator</span><span class="p">,</span> <span class="n">expiredAt</span><span class="p">,</span> <span class="n">hook</span><span class="p">);</span>
+        <span class="n">_afterHook</span><span class="p">(</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">provider</span><span class="p">,</span> <span class="n">evaluator</span><span class="p">));</span>
+
+        <span class="k">return</span> <span class="n">jobId</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">setProvider</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">address</span> <span class="n">provider_</span><span class="p">)</span> <span class="k">external</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Open</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">provider</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">provider_</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+        <span class="n">job</span><span class="p">.</span><span class="n">provider</span> <span class="o">=</span> <span class="n">provider_</span><span class="p">;</span>
+        <span class="k">emit</span> <span class="n">ProviderSet</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">provider_</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">setBudget</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">optParams</span><span class="p">)</span> <span class="k">external</span> <span class="n">nonReentrant</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Open</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">provider</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+
+        <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">amount</span><span class="p">,</span> <span class="n">optParams</span><span class="p">);</span>
+        <span class="n">_beforeHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+
+        <span class="n">job</span><span class="p">.</span><span class="n">budget</span> <span class="o">=</span> <span class="n">amount</span><span class="p">;</span>
+        <span class="k">emit</span> <span class="n">BudgetSet</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">amount</span><span class="p">);</span>
+        <span class="n">jobHasBudget</span><span class="p">[</span><span class="n">jobId</span><span class="p">]</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+
+        <span class="n">_afterHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">fund</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">optParams</span><span class="p">)</span> <span class="k">external</span> <span class="n">nonReentrant</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Open</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">provider</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">ProviderNotSet</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">block</span><span class="p">.</span><span class="n">timestamp</span> <span class="o">&gt;=</span> <span class="n">job</span><span class="p">.</span><span class="n">expiredAt</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+
+        <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">optParams</span><span class="p">);</span>
+        <span class="n">_beforeHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+
+        <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Funded</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">budget</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">paymentToken</span><span class="p">.</span><span class="n">safeTransferFrom</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">emit</span> <span class="n">JobFunded</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span><span class="p">);</span>
+
+        <span class="n">_afterHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">submit</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">deliverable</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">optParams</span><span class="p">)</span> <span class="k">external</span> <span class="n">nonReentrant</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Funded</span> <span class="o">&amp;&amp;</span>
+            <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Open</span> <span class="o">||</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">)</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">provider</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+
+        <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">deliverable</span><span class="p">,</span> <span class="n">optParams</span><span class="p">);</span>
+        <span class="n">_beforeHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+
+        <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Submitted</span><span class="p">;</span>
+        <span class="k">emit</span> <span class="n">JobSubmitted</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">provider</span><span class="p">,</span> <span class="n">deliverable</span><span class="p">);</span>
+
+        <span class="n">_afterHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">complete</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">reason</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">optParams</span><span class="p">)</span> <span class="k">external</span> <span class="n">nonReentrant</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Submitted</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">evaluator</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+
+        <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">optParams</span><span class="p">);</span>
+        <span class="n">_beforeHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+
+        <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Completed</span><span class="p">;</span>
+
+        <span class="kt">uint256</span> <span class="n">amount</span> <span class="o">=</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span><span class="p">;</span>
+        <span class="kt">uint256</span> <span class="n">platformFee</span> <span class="o">=</span> <span class="p">(</span><span class="n">amount</span> <span class="o">*</span> <span class="n">platformFeeBP</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10000</span><span class="p">;</span>
+        <span class="kt">uint256</span> <span class="n">evalFee</span> <span class="o">=</span> <span class="p">(</span><span class="n">amount</span> <span class="o">*</span> <span class="n">evaluatorFeeBP</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10000</span><span class="p">;</span>
+        <span class="kt">uint256</span> <span class="n">net</span> <span class="o">=</span> <span class="n">amount</span> <span class="o">-</span> <span class="n">platformFee</span> <span class="o">-</span> <span class="n">evalFee</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">platformFee</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">paymentToken</span><span class="p">.</span><span class="n">safeTransfer</span><span class="p">(</span><span class="n">platformTreasury</span><span class="p">,</span> <span class="n">platformFee</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">evalFee</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">paymentToken</span><span class="p">.</span><span class="n">safeTransfer</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evalFee</span><span class="p">);</span>
+            <span class="k">emit</span> <span class="n">EvaluatorFeePaid</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evalFee</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">net</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">paymentToken</span><span class="p">.</span><span class="n">safeTransfer</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">provider</span><span class="p">,</span> <span class="n">net</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="k">emit</span> <span class="n">JobCompleted</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">reason</span><span class="p">);</span>
+        <span class="k">emit</span> <span class="n">PaymentReleased</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">provider</span><span class="p">,</span> <span class="n">net</span><span class="p">);</span>
+
+        <span class="n">_afterHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">reject</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">reason</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">optParams</span><span class="p">)</span> <span class="k">external</span> <span class="n">nonReentrant</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Open</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Funded</span> <span class="o">||</span> <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Submitted</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">job</span><span class="p">.</span><span class="n">evaluator</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">optParams</span><span class="p">);</span>
+        <span class="n">_beforeHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+
+        <span class="n">JobStatus</span> <span class="n">prev</span> <span class="o">=</span> <span class="n">job</span><span class="p">.</span><span class="n">status</span><span class="p">;</span>
+        <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Rejected</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">((</span><span class="n">prev</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Funded</span> <span class="o">||</span> <span class="n">prev</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Submitted</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">paymentToken</span><span class="p">.</span><span class="n">safeTransfer</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span><span class="p">);</span>
+            <span class="k">emit</span> <span class="n">Refunded</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="k">emit</span> <span class="n">JobRejected</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">reason</span><span class="p">);</span>
+
+        <span class="n">_afterHook</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">jobId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sig</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">claimRefund</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">)</span> <span class="k">external</span> <span class="n">nonReentrant</span> <span class="p">{</span>
+        <span class="n">Job</span> <span class="k">storage</span> <span class="n">job</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidJob</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Funded</span> <span class="o">&amp;&amp;</span> <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Submitted</span><span class="p">)</span>
+            <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">block</span><span class="p">.</span><span class="n">timestamp</span> <span class="o">&lt;</span> <span class="n">job</span><span class="p">.</span><span class="n">expiredAt</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">WrongStatus</span><span class="p">();</span>
+
+        <span class="n">job</span><span class="p">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="p">.</span><span class="n">Expired</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">budget</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">paymentToken</span><span class="p">.</span><span class="n">safeTransfer</span><span class="p">(</span><span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span><span class="p">);</span>
+            <span class="k">emit</span> <span class="n">Refunded</span><span class="p">(</span><span class="n">jobId</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">client</span><span class="p">,</span> <span class="n">job</span><span class="p">.</span><span class="n">budget</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="k">emit</span> <span class="n">JobExpired</span><span class="p">(</span><span class="n">jobId</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ──────────────────── View ────────────────────
+</span>
+    <span class="k">function</span> <span class="n">getJob</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">jobId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="n">Job</span> <span class="k">memory</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">jobs</span><span class="p">[</span><span class="n">jobId</span><span class="p">];</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<ul>
+  <li>Evaluator is trusted for completion and rejection once the job is Submitted; a malicious evaluator can complete or reject arbitrarily. Use reputation (e.g. <a href="/EIPS/eip-8004">ERC-8004</a>) or staking for high-value jobs.</li>
+  <li>Once Funded, only the evaluator can reject, and only the provider can submit; the client cannot unilaterally withdraw, which protects the provider after they start work.</li>
+  <li>No dispute resolution or arbitration; reject/expire is final.</li>
+  <li>Single payment token per contract reduces attack surface; per-job tokens are an extension.</li>
+  <li><strong>Reentrancy:</strong> Functions that transfer tokens SHALL be protected (e.g. reentrancy guard).</li>
+  <li><strong>Tokens:</strong> Use SafeERC-20 or equivalent for <a href="/EIPS/eip-20">ERC-20</a>.</li>
+  <li><strong>Evaluator:</strong> MUST be set at creation; if “client completes”, pass <code class="language-plaintext highlighter-rouge">evaluator = client</code>.</li>
+  <li><strong>Hook gas limits</strong> (for hooked implementations): Implementations SHOULD impose a gas limit on hook calls (e.g. <code class="language-plaintext highlighter-rouge">call{gas: HOOK_GAS_LIMIT}(...)</code>) to bound execution cost and prevent hooks from consuming unbounded gas. The specific limit is left to the implementation as gas costs vary across chains.</li>
+  <li>Hook contracts are client-supplied and trusted by the client; implementations MUST NOT allow hooks to modify core escrow state directly. <code class="language-plaintext highlighter-rouge">claimRefund</code> is deliberately not hookable so that refunds after expiry cannot be blocked by a malicious hook.</li>
+  <li>Jobs that use <strong>advanced hooks</strong> (e.g. two‑phase escrow / fund‑transfer hooks that custody additional tokens) are expected to have <strong>more revert paths and tighter coupling</strong> to external logic than plain, non‑hooked Agentic Commerce jobs. Such hooks SHOULD be reserved for agents and users who understand and accept this trade‑off; for most simple jobs, a non‑hooked or policy‑only hook is RECOMMENDED.</li>
+</ul>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Davide Crapis&nbsp;(<a href="https://github.com/dcrapis">@dcrapis</a>), Bryan Lim&nbsp;(<a href="https://github.com/ai-virtual-b">@ai-virtual-b</a>), Tay Weixiong&nbsp;(<a href="https://github.com/twx-virtuals">@twx-virtuals</a>), Chooi Zuhwa&nbsp;(<a href="https://github.com/Zuhwa">@Zuhwa</a>), "ERC-8183: Agentic Commerce [DRAFT]," <em>Ethereum Improvement Proposals</em>, no. 8183, February 2026. Available: https://eips.ethereum.org/EIPS/eip-8183.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-8183: Agentic Commerce [DRAFT]",
+    "name": "ERC-8183: Agentic Commerce [DRAFT]",
+    "author": "Davide Crapis (@dcrapis), Bryan Lim (@ai-virtual-b), Tay Weixiong (@twx-virtuals), Chooi Zuhwa (@Zuhwa)",
+    "dateCreated": "2026-02-25",
+    "datePublished": "2026-02-25",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-8183-agentic-commerce/27902",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2026"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
