@@ -36,6 +36,7 @@ contract CrossReentryTest is Test {
 
         // Deploy hook that reenters complete from submit's afterAction
         CrossReenterHook hook = new CrossReenterHook(address(escrow), SEL_SUBMIT, SEL_COMPLETE);
+        escrow.setHookWhitelist(address(hook), true);
 
         // ── createJob + setProvider + setBudget + fund ──
         vm.startPrank(client);
@@ -70,6 +71,7 @@ contract CrossReentryTest is Test {
 
         // Deploy hook that reenters reject from complete's afterAction
         CrossReenterHook hook = new CrossReenterHook(address(escrow), SEL_COMPLETE, SEL_REJECT);
+        escrow.setHookWhitelist(address(hook), true);
 
         // ── createJob + setProvider + setBudget + fund + submit → Submitted ──
         vm.startPrank(client);

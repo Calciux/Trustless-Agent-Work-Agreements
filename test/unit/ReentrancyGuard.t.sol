@@ -36,6 +36,7 @@ contract ReentrancyGuardTest is Test {
     // Helper: deploy MaliciousReenterHook and create a job with it
     function _setupJobWithMaliciousHook() internal returns (uint256 jid, MaliciousReenterHook mHook) {
         mHook = new MaliciousReenterHook(address(escrow), reenterProvider);
+        escrow.setHookWhitelist(address(mHook), true);
         vm.prank(client);
         jid = escrow.createJob(address(0), evaluator, expiredAt, "desc", address(mHook));
     }
@@ -75,6 +76,7 @@ contract ReentrancyGuardTest is Test {
     // the job from reaching Funded state.
     function test_UT091_Reentrancy_Fund() public {
         FundOnlyReenterHook fundHook = new FundOnlyReenterHook(address(escrow));
+        escrow.setHookWhitelist(address(fundHook), true);
 
         vm.startPrank(client);
         uint256 jid = escrow.createJob(address(0), evaluator, expiredAt, "desc", address(fundHook));
@@ -96,6 +98,7 @@ contract ReentrancyGuardTest is Test {
     // would also reenter on fund(), preventing the job from reaching Funded state.
     function test_UT092_Reentrancy_Submit() public {
         SubmitOnlyReenterHook submitHook = new SubmitOnlyReenterHook(address(escrow), reenterProvider);
+        escrow.setHookWhitelist(address(submitHook), true);
 
         vm.startPrank(client);
         uint256 jid = escrow.createJob(address(0), evaluator, expiredAt, "desc", address(submitHook));
@@ -115,6 +118,7 @@ contract ReentrancyGuardTest is Test {
     // @dev Uses CompleteOnlyReenterHook for the same reason as UT-092.
     function test_UT093_Reentrancy_Complete() public {
         CompleteOnlyReenterHook completeHook = new CompleteOnlyReenterHook(address(escrow));
+        escrow.setHookWhitelist(address(completeHook), true);
 
         vm.startPrank(client);
         uint256 jid = escrow.createJob(address(0), evaluator, expiredAt, "desc", address(completeHook));
@@ -136,6 +140,7 @@ contract ReentrancyGuardTest is Test {
     // @dev Uses RejectOnlyReenterHook for the same reason as UT-092.
     function test_UT094_Reentrancy_Reject() public {
         RejectOnlyReenterHook rejectHook = new RejectOnlyReenterHook(address(escrow));
+        escrow.setHookWhitelist(address(rejectHook), true);
 
         vm.startPrank(client);
         uint256 jid = escrow.createJob(address(0), evaluator, expiredAt, "desc", address(rejectHook));
@@ -162,11 +167,13 @@ contract ReentrancyGuardTest is Test {
         // modifier catches it.
         //
         // Storage layout (verified against ERC8183Escrow.sol):
-        //   slot 0: treasury   (address, 20 bytes)
-        //   slot 1: feeBps     (uint256)
-        //   slot 2: _jobCounter (uint256)
-        //   slot 3: _jobs      (mapping — base slot)
-        //   slot 4: _locked    (bool)
+        //   slot 0: treasury       (address)
+        //   slot 1: feeBps         (uint256)
+        //   slot 2: evaluatorFeeBps (uint256)
+        //   slot 3: _jobCounter    (uint256)
+        //   slot 4: _jobs          (mapping — base slot)
+        //   slot 5: whitelistedHooks (mapping — base slot)
+        //   slot 6: _locked        (bool)
         //
         // immutables (owner, _paymentToken) and constants (MAX_FEE_BPS)
         // are not in storage and do not affect slot numbering.
@@ -182,8 +189,8 @@ contract ReentrancyGuardTest is Test {
         vm.stopPrank();
         vm.warp(expiredAt + 1);
 
-        // Artificially set _locked = true (slot 4)
-        vm.store(address(escrow), bytes32(uint256(4)), bytes32(uint256(1)));
+        // Artificially set _locked = true (slot 6)
+        vm.store(address(escrow), bytes32(uint256(6)), bytes32(uint256(1)));
 
         vm.expectRevert("ERC8183: reentrant call");
         escrow.claimRefund(jid);

@@ -22,6 +22,7 @@ contract FundTest is Test {
         token = new MockERC20();
         escrow = new ERC8183Escrow(address(token), address(0), 0);
         hook = new MockHook();
+        escrow.setHookWhitelist(address(hook), true);
 
         client = makeAddr("client");
         provider = makeAddr("provider");
@@ -174,6 +175,6 @@ contract FundTest is Test {
         escrow.fund(jid2, 75, optParams);
         assertEq(uint256(escrow.getStatus(jid2)), uint256(IERC8183.Status.Funded));
         assertEq(hook.lastSelector(), sel3);
-        assertEq(hook.lastData(), optParams);
+        assertEq(hook.lastData(), abi.encode(client, uint256(75), optParams));
     }
 }

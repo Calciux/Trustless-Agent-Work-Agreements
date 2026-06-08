@@ -71,6 +71,17 @@ interface IERC8183 is IERC165 {
     /// @param operator The operator address (address(0) means role revoked).
     event OperatorSet(uint256 indexed jobId, address indexed operator);
 
+    /// @notice Emitted when evaluator fee is paid on job completion.
+    /// @param jobId The job identifier.
+    /// @param evaluator The evaluator address receiving the fee.
+    /// @param amount The fee amount paid.
+    event EvaluatorFeePaid(uint256 indexed jobId, address indexed evaluator, uint256 amount);
+
+    /// @notice Emitted when a hook's whitelist status changes.
+    /// @param hook The hook contract address.
+    /// @param allowed Whether the hook is now allowed (true) or disallowed (false).
+    event HookWhitelistUpdated(address indexed hook, bool allowed);
+
     // ── Core Functions ──────────────────────────────────────────────
 
     function createJob(
@@ -121,6 +132,11 @@ interface IERC8183 is IERC165 {
 
     // claimRefund: NOT hookable — no optParams overload
     function claimRefund(uint256 jobId) external;
+
+    // ── Admin ────────────────────────────────────────────────────────
+
+    function setEvaluatorFeeBps(uint256 evaluatorFeeBps_) external;
+    function setHookWhitelist(address hook, bool allowed) external;
 
     // ── Getters ─────────────────────────────────────────────────────
 

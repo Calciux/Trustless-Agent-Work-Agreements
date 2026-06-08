@@ -2,6 +2,7 @@
 pragma solidity ^0.8.21;
 
 import {IACPHook} from "../../contracts/interfaces/IACPHook.sol";
+import {IERC165} from "../../contracts/interfaces/IERC165.sol";
 
 // @title CrossReenterHook — 跨函数重入 Hook
 // @dev 在 afterAction 中根据触发 selector 查表，调用不同的目标函数
@@ -36,6 +37,10 @@ contract CrossReenterHook is IACPHook {
         escrow = _escrow;
         triggerSelector = _triggerSelector;
         targetFunction = _targetFunction;
+    }
+
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IACPHook).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 
     function beforeAction(uint256, bytes4, bytes calldata) external override {

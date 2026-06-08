@@ -59,6 +59,7 @@ contract ExpirePathsTest is Test {
 
         // Use MockHook to verify no hook calls during claimRefund
         MockHook hook = new MockHook();
+        escrow.setHookWhitelist(address(hook), true);
         uint256 shortExpiry = block.timestamp + 3600;
 
         vm.startPrank(client);

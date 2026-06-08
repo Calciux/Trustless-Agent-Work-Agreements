@@ -30,7 +30,7 @@ contract EdgeIntegrationTest is Test {
         vm.prank(client);
         token.approve(address(escrow), 1000);
 
-        uint256 shortExpiry = block.timestamp + 1;
+        uint256 shortExpiry = block.timestamp + 10 minutes;
 
         // ── setup to Funded ──
         vm.startPrank(client);
@@ -44,7 +44,7 @@ contract EdgeIntegrationTest is Test {
         assertLt(block.timestamp, shortExpiry);
 
         // ── warp past expiry ──
-        vm.warp(block.timestamp + 2);
+        vm.warp(shortExpiry + 1);
         assertGt(block.timestamp, shortExpiry);
         assertEq(uint256(escrow.getStatus(1)), uint256(IERC8183.Status.Funded));
 

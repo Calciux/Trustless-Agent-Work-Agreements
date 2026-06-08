@@ -22,6 +22,7 @@ contract HookCallbacksTest is Test {
         token = new MockERC20();
         escrow = new ERC8183Escrow(address(token), address(0), 0);
         hook = new MockHook();
+        escrow.setHookWhitelist(address(hook), true);
 
         client = makeAddr("client");
         provider = makeAddr("provider");
@@ -50,11 +51,15 @@ contract HookCallbacksTest is Test {
         uint256 jid = _createJobWithHook();
         bytes4 expectedSel = bytes4(keccak256("setProvider(uint256,address)"));
 
+        // createJob calls afterAction once — record baseline
+        uint256 bcBefore = hook.beforeCount();
+        uint256 acBefore = hook.afterCount();
+
         vm.prank(client);
         escrow.setProvider(jid, provider);
 
-        assertEq(hook.beforeCount(), 1, "beforeAction should be called once");
-        assertEq(hook.afterCount(), 1, "afterAction should be called once");
+        assertEq(hook.beforeCount(), bcBefore + 1, "beforeAction should be called once");
+        assertEq(hook.afterCount(), acBefore + 1, "afterAction should be called once");
         assertEq(hook.lastSelector(), expectedSel);
         assertEq(hook.lastJobId(), jid);
     }
@@ -81,11 +86,15 @@ contract HookCallbacksTest is Test {
         uint256 jid = _createJobWithHook();
         bytes4 expectedSel = bytes4(keccak256("setBudget(uint256,uint256)"));
 
+        // createJob calls afterAction once — record baseline
+        uint256 bcBefore = hook.beforeCount();
+        uint256 acBefore = hook.afterCount();
+
         vm.prank(client);
         escrow.setBudget(jid, 100);
 
-        assertEq(hook.beforeCount(), 1);
-        assertEq(hook.afterCount(), 1);
+        assertEq(hook.beforeCount(), bcBefore + 1);
+        assertEq(hook.afterCount(), acBefore + 1);
         assertEq(hook.lastSelector(), expectedSel);
     }
 

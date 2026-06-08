@@ -22,6 +22,7 @@ contract ClaimRefundTest is Test {
         token = new MockERC20();
         escrow = new ERC8183Escrow(address(token), address(0), 0);
         hook = new MockHook();
+        escrow.setHookWhitelist(address(hook), true);
 
         client = makeAddr("client");
         provider = makeAddr("provider");

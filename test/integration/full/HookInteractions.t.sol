@@ -35,6 +35,7 @@ contract HookInteractionsTest is Test {
 
         // Deploy hook that reverts in beforeAction for SEL_FUND
         RevertingMockHook hook = new RevertingMockHook(true, false, SEL_FUND);
+        escrow.setHookWhitelist(address(hook), true);
 
         // ── createJob + setProvider + setBudget ──
         vm.startPrank(client);
@@ -70,6 +71,7 @@ contract HookInteractionsTest is Test {
 
         // Deploy hook that reverts in afterAction for SEL_COMPLETE
         RevertingMockHook hook = new RevertingMockHook(false, true, SEL_COMPLETE);
+        escrow.setHookWhitelist(address(hook), true);
 
         // ── setup to Submitted ──
         vm.startPrank(client);

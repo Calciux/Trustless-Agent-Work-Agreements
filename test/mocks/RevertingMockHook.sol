@@ -2,6 +2,7 @@
 pragma solidity ^0.8.21;
 
 import {IACPHook} from "../../contracts/interfaces/IACPHook.sol";
+import {IERC165} from "../../contracts/interfaces/IERC165.sol";
 
 // @title RevertingMockHook — 可控 revert 的 Hook
 // @dev 通过构造函数参数控制 revert 时机和目标函数
@@ -26,6 +27,10 @@ contract RevertingMockHook is IACPHook {
         revertOnBefore = _revertOnBefore;
         revertOnAfter = _revertOnAfter;
         targetSelector = _targetSelector;
+    }
+
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IACPHook).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 
     function beforeAction(uint256 jobId, bytes4 selector, bytes calldata data) external override {

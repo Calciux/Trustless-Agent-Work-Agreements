@@ -26,9 +26,9 @@ contract EdgeCasesTest is Test {
         expiredAt = block.timestamp + 7 days;
     }
 
-    // ── UT-096: expiredAt = block.timestamp + 1 → 成功 ───────────────
+    // ── UT-096: expiredAt = block.timestamp + 10 minutes → 成功 ──────
     function test_UT096_CreateJob_ExpiredAtPlusOneSecond() public {
-        uint256 nearExpiry = block.timestamp + 1;
+        uint256 nearExpiry = block.timestamp + 10 minutes;
 
         vm.prank(client);
         uint256 jid = escrow.createJob(address(0), evaluator, nearExpiry, "desc", address(0));
@@ -191,7 +191,7 @@ contract EdgeCasesTest is Test {
 
     // ── UT-104: block.timestamp == expiredAt → 可退款 ────────────────
     function test_UT104_ClaimRefund_ExactlyAtExpiry() public {
-        uint256 exactExpiry = block.timestamp + 100;
+        uint256 exactExpiry = block.timestamp + 10 minutes;
 
         vm.startPrank(client);
         uint256 jid = escrow.createJob(address(0), evaluator, exactExpiry, "desc", address(0));

@@ -22,6 +22,7 @@ contract SetBudgetTest is Test {
         token = new MockERC20();
         escrow = new ERC8183Escrow(address(token), address(0), 0);
         hook = new MockHook();
+        escrow.setHookWhitelist(address(hook), true);
 
         client = makeAddr("client");
         provider = makeAddr("provider");
@@ -141,7 +142,7 @@ contract SetBudgetTest is Test {
 
         assertEq(escrow.getJob(jid2).budget, 75);
         assertEq(hook.lastSelector(), sel3);
-        assertEq(hook.lastData(), optParams);
+        assertEq(hook.lastData(), abi.encode(client, uint256(75), optParams));
         assertEq(hook.beforeCount(), beforeBefore2 + 1);
     }
 }

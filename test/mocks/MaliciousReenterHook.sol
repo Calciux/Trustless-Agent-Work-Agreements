@@ -2,6 +2,7 @@
 pragma solidity ^0.8.21;
 
 import {IACPHook} from "../../contracts/interfaces/IACPHook.sol";
+import {IERC165} from "../../contracts/interfaces/IERC165.sol";
 
 // @title MaliciousReenterHook — 用于防重入测试的恶意 Hook
 // @notice 在 afterAction 中根据 selector 重入调用对应的核心函数
@@ -33,6 +34,10 @@ contract MaliciousReenterHook is IACPHook {
     constructor(address escrow_, address reenterProvider_) {
         escrow = escrow_;
         reenterProvider = reenterProvider_;
+    }
+
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IACPHook).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 
     // @notice beforeAction — 不执行重入（仅在 afterAction 中重入）

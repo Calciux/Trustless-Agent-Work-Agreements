@@ -28,6 +28,10 @@ contract ERC8183Escrow is IERC8183 {
     bytes4 private constant SEL_COMPLETE_EXT = bytes4(keccak256("complete(uint256,bytes32,bytes)"));
     bytes4 private constant SEL_REJECT_EXT = bytes4(keccak256("reject(uint256,bytes32,bytes)"));
 
+    // createJob 选择器（仅 afterHook）
+    bytes4 private constant SEL_CREATEJOB = bytes4(keccak256("createJob(address,address,uint256,string,address)"));
+    bytes4 private constant SEL_CREATEJOB_TOKEN = bytes4(keccak256("createJob(address,address,uint256,string,address,address)"));
+
     // ========== 存储变量 ==========
 
     // @notice 合约部署者（拥有管理权限）
@@ -42,14 +46,23 @@ contract ERC8183Escrow is IERC8183 {
     // @notice 平台手续费费率（基点 bps：250 = 2.5%，10000 = 100%）
     uint256 public feeBps;
 
+    // @notice Evaluator 手续费费率（基点，0 = 不收费）
+    uint256 public evaluatorFeeBps;
+
     // @notice 最大手续费费率上限
     uint256 public constant MAX_FEE_BPS = 10000;
+
+    // @notice 最小任务有效期（5 分钟）
+    uint256 public constant MIN_JOB_DURATION = 5 minutes;
 
     // @notice 任务计数器（自增，从 1 开始）
     uint256 private _jobCounter;
 
     // @notice 任务映射表：jobId → Job
     mapping(uint256 => Job) private _jobs;
+
+    // @notice Hook 合约白名单：address → 是否允许
+    mapping(address => bool) public whitelistedHooks;
 
     // @notice 防重入锁
     bool private _locked;
@@ -137,8 +150,20 @@ contract ERC8183Escrow is IERC8183 {
 
     // @notice 更新平台手续费费率（仅部署者）
     function setFeeBps(uint256 feeBps_) external onlyOwner {
-        require(feeBps_ <= MAX_FEE_BPS, "ERC8183: fee too high");
+        require(feeBps_ + evaluatorFeeBps <= MAX_FEE_BPS, "ERC8183: total fee too high");
         feeBps = feeBps_;
+    }
+
+    // @notice 更新 Evaluator 手续费费率（仅 owner）
+    function setEvaluatorFeeBps(uint256 evaluatorFeeBps_) external onlyOwner {
+        require(feeBps + evaluatorFeeBps_ <= MAX_FEE_BPS, "ERC8183: total fee too high");
+        evaluatorFeeBps = evaluatorFeeBps_;
+    }
+
+    // @notice 设置 Hook 合约的白名单状态（仅 owner）
+    function setHookWhitelist(address hook, bool allowed) external onlyOwner {
+        whitelistedHooks[hook] = allowed;
+        emit HookWhitelistUpdated(hook, allowed);
     }
 
     // ========== 查询函数 ==========
@@ -183,7 +208,16 @@ contract ERC8183Escrow is IERC8183 {
     ) external override returns (uint256 jobId) {
         // SHALL revert if evaluator is zero or expiredAt is not in the future
         require(evaluator != address(0), "ERC8183: evaluator is zero address");
-        require(expiredAt > block.timestamp, "ERC8183: expiredAt not in future");
+        require(expiredAt > block.timestamp + MIN_JOB_DURATION, "ERC8183: expiredAt too soon");
+
+        // Hook: 白名单 + ERC-165 校验
+        if (hook != address(0)) {
+            require(whitelistedHooks[hook], "ERC8183: hook not whitelisted");
+            require(
+                IERC165(hook).supportsInterface(type(IACPHook).interfaceId),
+                "ERC8183: hook does not implement IACPHook"
+            );
+        }
 
         // 自增任务 ID（从 1 开始）
         jobId = ++_jobCounter;
@@ -203,6 +237,11 @@ contract ERC8183Escrow is IERC8183 {
         });
 
         emit JobCreated(jobId, msg.sender, provider, evaluator, expiredAt);
+
+        // Hook: afterAction（仅 afterAction，无 beforeAction）
+        if (hook != address(0)) {
+            IACPHook(hook).afterAction(jobId, SEL_CREATEJOB, abi.encode(msg.sender, provider, evaluator, expiredAt, description, hook));
+        }
     }
 
     // @notice Creates a job with a per-job payment token.
@@ -216,7 +255,16 @@ contract ERC8183Escrow is IERC8183 {
         address paymentToken_
     ) external override returns (uint256 jobId) {
         require(evaluator != address(0), "ERC8183: evaluator is zero address");
-        require(expiredAt > block.timestamp, "ERC8183: expiredAt not in future");
+        require(expiredAt > block.timestamp + MIN_JOB_DURATION, "ERC8183: expiredAt too soon");
+
+        // Hook: 白名单 + ERC-165 校验
+        if (hook != address(0)) {
+            require(whitelistedHooks[hook], "ERC8183: hook not whitelisted");
+            require(
+                IERC165(hook).supportsInterface(type(IACPHook).interfaceId),
+                "ERC8183: hook does not implement IACPHook"
+            );
+        }
 
         jobId = ++_jobCounter;
         _jobs[jobId] = Job({
@@ -233,18 +281,23 @@ contract ERC8183Escrow is IERC8183 {
         });
 
         emit JobCreated(jobId, msg.sender, provider, evaluator, expiredAt);
+
+        // Hook: afterAction（仅 afterAction，无 beforeAction）
+        if (hook != address(0)) {
+            IACPHook(hook).afterAction(jobId, SEL_CREATEJOB_TOKEN, abi.encode(msg.sender, provider, evaluator, expiredAt, description, hook, paymentToken_));
+        }
     }
 
     // ========== 核心函数：设置提供者 ==========
 
     // @notice 设置服务提供者地址（无 optParams）
     function setProvider(uint256 jobId, address provider) external override {
-        _setProvider(jobId, provider, "", SEL_SETPROVIDER);
+        _setProvider(jobId, provider, abi.encode(msg.sender, provider), SEL_SETPROVIDER);
     }
 
     // @notice 设置服务提供者地址（带 optParams，透传 Hook）
     function setProvider(uint256 jobId, address provider, bytes calldata optParams) external override {
-        _setProvider(jobId, provider, optParams, SEL_SETPROVIDER_EXT);
+        _setProvider(jobId, provider, abi.encode(msg.sender, provider, optParams), SEL_SETPROVIDER_EXT);
     }
 
     // @dev 内部实现：设置提供者
@@ -288,12 +341,12 @@ contract ERC8183Escrow is IERC8183 {
 
     // @notice 设置任务预算（无 optParams）
     function setBudget(uint256 jobId, uint256 amount) external override {
-        _setBudget(jobId, amount, "", SEL_SETBUDGET);
+        _setBudget(jobId, amount, abi.encode(msg.sender, amount), SEL_SETBUDGET);
     }
 
     // @notice 设置任务预算（带 optParams，透传 Hook）
     function setBudget(uint256 jobId, uint256 amount, bytes calldata optParams) external override {
-        _setBudget(jobId, amount, optParams, SEL_SETBUDGET_EXT);
+        _setBudget(jobId, amount, abi.encode(msg.sender, amount, optParams), SEL_SETBUDGET_EXT);
     }
 
     // @dev 内部实现：设置预算
@@ -324,12 +377,12 @@ contract ERC8183Escrow is IERC8183 {
 
     // @notice 客户向托管注资（无 optParams）
     function fund(uint256 jobId, uint256 expectedBudget) external override {
-        _fund(jobId, expectedBudget, "", SEL_FUND);
+        _fund(jobId, expectedBudget, abi.encode(msg.sender, expectedBudget), SEL_FUND);
     }
 
     // @notice 客户向托管注资（带 optParams，透传 Hook）
     function fund(uint256 jobId, uint256 expectedBudget, bytes calldata optParams) external override {
-        _fund(jobId, expectedBudget, optParams, SEL_FUND_EXT);
+        _fund(jobId, expectedBudget, abi.encode(msg.sender, expectedBudget, optParams), SEL_FUND_EXT);
     }
 
     // @dev 内部实现：注资
@@ -370,12 +423,12 @@ contract ERC8183Escrow is IERC8183 {
 
     // @notice 提供者提交交付物（无 optParams）
     function submit(uint256 jobId, bytes32 deliverable) external override {
-        _submit(jobId, deliverable, "", SEL_SUBMIT);
+        _submit(jobId, deliverable, abi.encode(msg.sender, deliverable), SEL_SUBMIT);
     }
 
     // @notice 提供者提交交付物（带 optParams，透传 Hook）
     function submit(uint256 jobId, bytes32 deliverable, bytes calldata optParams) external override {
-        _submit(jobId, deliverable, optParams, SEL_SUBMIT_EXT);
+        _submit(jobId, deliverable, abi.encode(msg.sender, deliverable, optParams), SEL_SUBMIT_EXT);
     }
 
     // @dev 内部实现：提交交付物
@@ -405,12 +458,12 @@ contract ERC8183Escrow is IERC8183 {
 
     // @notice 裁决者确认任务完成（无 optParams）
     function complete(uint256 jobId, bytes32 reason) external override {
-        _complete(jobId, reason, "", SEL_COMPLETE);
+        _complete(jobId, reason, abi.encode(msg.sender, reason), SEL_COMPLETE);
     }
 
     // @notice 裁决者确认任务完成（带 optParams，透传 Hook）
     function complete(uint256 jobId, bytes32 reason, bytes calldata optParams) external override {
-        _complete(jobId, reason, optParams, SEL_COMPLETE_EXT);
+        _complete(jobId, reason, abi.encode(msg.sender, reason, optParams), SEL_COMPLETE_EXT);
     }
 
     // @dev 内部实现：确认完成并放款
@@ -434,21 +487,32 @@ contract ERC8183Escrow is IERC8183 {
         uint256 escrowBalance = job.budget;
         address providerAddr = job.provider;
 
-        // 计算手续费（仅在配置了 treasury 且 feeBps > 0 时）
-        uint256 fee = 0;
-        uint256 payAmount = escrowBalance;
+        // 1. 计算平台费
+        uint256 platformFee = 0;
         if (treasury != address(0) && feeBps > 0) {
-            fee = (escrowBalance * feeBps) / MAX_FEE_BPS;
-            payAmount = escrowBalance - fee;
+            platformFee = (escrowBalance * feeBps) / MAX_FEE_BPS;
         }
 
-        // 放款给 Provider（扣除手续费后的金额）
+        // 2. 计算 Evaluator 费
+        uint256 evaluatorFee = 0;
+        if (evaluatorFeeBps > 0) {
+            evaluatorFee = (escrowBalance * evaluatorFeeBps) / MAX_FEE_BPS;
+        }
+
+        // 3. Provider 收款 = budget - 平台费 - Evaluator 费
+        uint256 payAmount = escrowBalance - platformFee - evaluatorFee;
+
+        // 4. 转账：Provider → Evaluator → Treasury
         IERC20Minimal token = _resolveToken(jobId);
         require(token.transfer(providerAddr, payAmount), "ERC8183: payment transfer failed");
 
-        // 支付平台手续费（如果有）
-        if (fee > 0) {
-            require(token.transfer(treasury, fee), "ERC8183: fee transfer failed");
+        if (evaluatorFee > 0) {
+            require(token.transfer(job.evaluator, evaluatorFee), "ERC8183: evaluator fee transfer failed");
+            emit EvaluatorFeePaid(jobId, job.evaluator, evaluatorFee);
+        }
+
+        if (platformFee > 0) {
+            require(token.transfer(treasury, platformFee), "ERC8183: fee transfer failed");
         }
 
         // 事件：状态确认 + 金额明细
@@ -463,12 +527,12 @@ contract ERC8183Escrow is IERC8183 {
 
     // @notice 拒绝任务（无 optParams）
     function reject(uint256 jobId, bytes32 reason) external override {
-        _reject(jobId, reason, "", SEL_REJECT);
+        _reject(jobId, reason, abi.encode(msg.sender, reason), SEL_REJECT);
     }
 
     // @notice 拒绝任务（带 optParams，透传 Hook）
     function reject(uint256 jobId, bytes32 reason, bytes calldata optParams) external override {
-        _reject(jobId, reason, optParams, SEL_REJECT_EXT);
+        _reject(jobId, reason, abi.encode(msg.sender, reason, optParams), SEL_REJECT_EXT);
     }
 
     // @dev 内部实现：拒绝任务

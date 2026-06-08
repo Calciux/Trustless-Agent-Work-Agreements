@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {ERC8183Escrow} from "../../contracts/ERC8183Escrow.sol";
 import {IERC8183} from "../../contracts/interfaces/IERC8183.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockHook} from "../mocks/MockHook.sol";
 
 // @title CreateJobTest — UT-004 ~ UT-008
 contract CreateJobTest is Test {
@@ -50,11 +51,11 @@ contract CreateJobTest is Test {
         address evaluator = makeAddr("evaluator");
 
         // expiredAt == block.timestamp
-        vm.expectRevert("ERC8183: expiredAt not in future");
+        vm.expectRevert("ERC8183: expiredAt too soon");
         escrow.createJob(address(0), evaluator, block.timestamp, "desc", address(0));
 
         // expiredAt == block.timestamp - 1
-        vm.expectRevert("ERC8183: expiredAt not in future");
+        vm.expectRevert("ERC8183: expiredAt too soon");
         escrow.createJob(address(0), evaluator, block.timestamp - 1, "desc", address(0));
     }
 
@@ -63,8 +64,12 @@ contract CreateJobTest is Test {
         address client = makeAddr("client");
         address provider = makeAddr("provider");
         address evaluator = makeAddr("evaluator");
-        address hook = makeAddr("hook");
+        MockHook hookContract = new MockHook();
+        address hook = address(hookContract);
         uint256 expiredAt = block.timestamp + 30 days;
+
+        // Whitelist the hook address so createJob succeeds
+        escrow.setHookWhitelist(hook, true);
 
         vm.expectEmit(true, true, true, true);
         emit IERC8183.JobCreated(1, client, provider, evaluator, expiredAt);

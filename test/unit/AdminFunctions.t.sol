@@ -38,7 +38,7 @@ contract AdminFunctionsTest is Test {
 
     // ── UT-074: setFeeBps > MAX_FEE_BPS → revert ────────────────────
     function test_UT074_SetFeeBps_RevertWhen_TooHigh() public {
-        vm.expectRevert("ERC8183: fee too high");
+        vm.expectRevert("ERC8183: total fee too high");
         escrow.setFeeBps(10001);
     }
 

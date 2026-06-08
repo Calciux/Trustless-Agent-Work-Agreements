@@ -23,6 +23,7 @@ contract SetProviderTest is Test {
         token = new MockERC20();
         escrow = new ERC8183Escrow(address(token), address(0), 0);
         hook = new MockHook();
+        escrow.setHookWhitelist(address(hook), true);
 
         client = makeAddr("client");
         provider = makeAddr("provider");
@@ -129,6 +130,10 @@ contract SetProviderTest is Test {
         // Compute expected selector for 3-param version
         bytes4 expectedSelector = bytes4(keccak256("setProvider(uint256,address,bytes)"));
 
+        // createJob calls afterAction once — record baseline
+        uint256 bcBefore = hook.beforeCount();
+        uint256 acBefore = hook.afterCount();
+
         vm.prank(client);
         escrow.setProvider(jid, provider, optParams);
 
@@ -138,8 +143,8 @@ contract SetProviderTest is Test {
 
         // Verify Hook received correct selector and data
         assertEq(hook.lastSelector(), expectedSelector, "hook selector should be ext version");
-        assertEq(hook.lastData(), optParams, "hook data should match optParams");
-        assertEq(hook.beforeCount(), 1, "beforeAction should be called once");
-        assertEq(hook.afterCount(), 1, "afterAction should be called once");
+        assertEq(hook.lastData(), abi.encode(client, provider, optParams), "hook data should match optParams");
+        assertEq(hook.beforeCount(), bcBefore + 1, "beforeAction should be called once");
+        assertEq(hook.afterCount(), acBefore + 1, "afterAction should be called once");
     }
 }
