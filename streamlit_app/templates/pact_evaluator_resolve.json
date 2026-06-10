@@ -1,0 +1,22 @@
+{
+  "name": "erc8183-{{action}}-{{job_id}}",
+  "policies": [{
+    "name": "erc8183-{{action}}-{{job_id}}",
+    "type": "contract_call",
+    "rules": {
+      "effect": "allow",
+      "when": {
+        "chain_in": ["{{chain}}"],
+        "target_in": [{
+          "chain_id": "{{chain}}",
+          "contract_addr": "{{escrow_addr}}",
+          "function_id": "{{selector}}"
+        }]
+      },
+      "always_review": true
+    }
+  }],
+  "completion_conditions": [
+    {"type": "tx_count", "threshold": "1"}
+  ]
+}

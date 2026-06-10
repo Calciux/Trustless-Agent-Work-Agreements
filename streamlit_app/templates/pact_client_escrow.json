@@ -1,0 +1,27 @@
+{
+  "name": "erc8183-client-{{job_id}}",
+  "policies": [{
+    "name": "erc8183-client-{{job_id}}",
+    "type": "contract_call",
+    "rules": {
+      "effect": "allow",
+      "when": {
+        "chain_in": ["{{chain}}"],
+        "target_in": [{
+          "chain_id": "{{chain}}",
+          "contract_addr": "{{escrow_addr}}"
+        }]
+      },
+      "deny_if": {
+        "amount_gt": "{{max_eth}}",
+        "usage_limits": {
+          "rolling_24h": {"tx_count_gt": "{{max_tx}}"}
+        }
+      },
+      "always_review": true
+    }
+  }],
+  "completion_conditions": [
+    {"type": "tx_count", "threshold": "{{step_count}}"}
+  ]
+}

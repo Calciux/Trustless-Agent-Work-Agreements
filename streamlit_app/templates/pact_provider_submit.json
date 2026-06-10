@@ -1,0 +1,27 @@
+{
+  "name": "erc8183-submit-{{job_id}}",
+  "policies": [{
+    "name": "erc8183-submit-{{job_id}}",
+    "type": "contract_call",
+    "rules": {
+      "effect": "allow",
+      "when": {
+        "chain_in": ["{{chain}}"],
+        "target_in": [{
+          "chain_id": "{{chain}}",
+          "contract_addr": "{{escrow_addr}}",
+          "function_id": "0x2ecea788"
+        }]
+      },
+      "deny_if": {
+        "usage_limits": {
+          "rolling_24h": {"tx_count_gt": 3}
+        }
+      },
+      "always_review": true
+    }
+  }],
+  "completion_conditions": [
+    {"type": "tx_count", "threshold": "1"}
+  ]
+}

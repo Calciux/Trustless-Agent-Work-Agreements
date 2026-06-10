@@ -1,0 +1,25 @@
+{
+  "name": "ttk-approve-{{job_id}}",
+  "policies": [{
+    "name": "ttk-approve-{{job_id}}",
+    "type": "contract_call",
+    "rules": {
+      "effect": "allow",
+      "when": {
+        "chain_in": ["{{chain}}"],
+        "target_in": [{
+          "chain_id": "{{chain}}",
+          "contract_addr": "{{ttk_addr}}",
+          "function_id": "0x095ea7b3"
+        }]
+      },
+      "deny_if": {
+        "amount_gt": "{{max_ttk}}"
+      },
+      "always_review": true
+    }
+  }],
+  "completion_conditions": [
+    {"type": "tx_count", "threshold": "1"}
+  ]
+}
