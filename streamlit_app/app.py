@@ -10,7 +10,7 @@ if str(_THIS_DIR) not in sys.path:
 
 st.set_page_config(page_title="Trustless Agent", page_icon="🏦", layout="wide")
 
-from config import SKIP_CAW
+from config import SKIP_CAW, PACT_OPTIMIZED
 from caw_types import WorkflowStep
 from session_state import SessionStateManager
 from mock_handler import MockHandler
@@ -67,6 +67,16 @@ _CONTRACT_NAMES = {
     "0x94022198f8497f98a47d24b754a602ad2a97fe99": "ETH 测试币",
 }
 
+_FUNC_NAMES = {
+    "0x095ea7b3": "approve(授权代币)",
+    "0x41528812": "createJob(创建任务)",
+    "0x9675dc17": "setBudget(设置预算)",
+    "0xa65e2cfd": "fund(锁定资金)",
+    "0x2ecea788": "submit(提交成果)",
+    "0xcd56b1b6": "complete(放款)",
+    "0x6be1320b": "reject(退款)",
+}
+
 _STEP_HUMAN = {
     "approve_ttk": (
         "授权托管合约使用您的代币",
@@ -109,14 +119,54 @@ _STEP_HUMAN = {
 def _cname(addr):
     return _CONTRACT_NAMES.get(addr.lower(), f"合约 {addr[:10]}...")
 
-def _build_timeline_entry(kind, step_name, contract_addr, func_sig, args, pact_name=None):
-    """Build a single timeline entry with human + technical layers."""
+def _build_timeline_entry(kind, step_name, contract_addr, func_sig, args, pact_name=None, pact_json=None, is_reused=False):
+    """Build a single timeline entry with human + technical layers.
+    
+    In optimized mode, pact entries show always_review status and all function whitelists.
+    Reused Pacts are marked with a ♻️ indicator.
+    """
     human_title, human_desc = _STEP_HUMAN.get(step_name, (step_name, ""))
     cname = _cname(contract_addr)
 
+    # Build rich Pact detail text
+    pact_detail = ""
+    if pact_json:
+        policies = pact_json.get("policies", [])
+        for pi, pol in enumerate(policies):
+            rules = pol.get("rules", {})
+            ar = rules.get("always_review", None)
+            deny_if = rules.get("deny_if", {})
+            targets = rules.get("when", {}).get("target_in", [])
+            
+            ar_label = "🔴 需审批" if ar else ("🟢 自动放行" if ar is False else "❓")
+            pact_detail += f"\n**策略 {pi+1}: {pol.get('name', '?')}** ({ar_label})"
+            
+            for ti, t in enumerate(targets):
+                fid = t.get("function_id", "")
+                caddr = t.get("contract_addr", "")[:10]
+                fname = _FUNC_NAMES.get(fid, fid[:10] if fid else "(all)")
+                pact_detail += f"\n  └─ {cname if ti==0 else cname}: `{fname}`"
+            
+            if deny_if:
+                limits = []
+                if "amount_gt" in deny_if:
+                    limits.append(f"金额>{deny_if['amount_gt']} wei")
+                usage = deny_if.get("usage_limits", {}).get("rolling_24h", {})
+                if "tx_count_gt" in usage:
+                    limits.append(f"24h内>{usage['tx_count_gt']}笔")
+                if limits:
+                    pact_detail += f"\n  └─ 拒绝条件: {', '.join(limits)}"
+    
     # Human layer
     if kind == "pact":
-        human = f"📜 **策略规则已生成：{human_title}**\n\n{human_desc}\n\n📱 请在 CAW App 中批准此策略"
+        if is_reused:
+            human = f"♻️ **复用已有策略：{human_title}**\n\n{human_desc}\n\n✅ 策略已批准，直接执行"
+        else:
+            mode_hint = ""
+            if PACT_OPTIMIZED and pact_json:
+                all_auto = all(p.get("rules", {}).get("always_review") is False for p in pact_json.get("policies", []))
+                mode_hint = "\n\n🟢 **策略内交易将自动执行** (无需逐笔审批)" if all_auto else ""
+            human = f"📜 **策略规则已生成：{human_title}**\n\n{human_desc}{mode_hint}\n\n📱 请在 CAW App 中批准此策略"
     else:
         human = f"⛓️ **链上执行：{human_title}**\n\n{human_desc}\n\n📱 请在 CAW App 中批准此合约调用"
 
@@ -128,6 +178,8 @@ def _build_timeline_entry(kind, step_name, contract_addr, func_sig, args, pact_n
         f"**参数**: `({args_str})`\n"
         f"**Pact 名称**: `{pact_name or '—'}`"
     )
+    if pact_detail:
+        technical += f"\n\n---\n**策略详情**:{pact_detail}"
 
     return {"kind": kind, "human": human, "technical": technical}
 
@@ -158,13 +210,20 @@ def _run_workflow(orch, text, ssm):
                 fid = targets[0].get("function_id","") if targets else ""
 
                 step = step_name_from_exec
-                entry = _build_timeline_entry("pact", step, contract, fid, [], pname)
+                role = orch.client.get_role().value
+                # In optimized mode, check if Pact is being reused
+                is_reused = PACT_OPTIMIZED and role in context.role_pact_id
+                entry = _build_timeline_entry("pact", step, contract, fid, [], pname,
+                                              pact_json=pj, is_reused=is_reused)
                 timeline.append(entry)
                 _q.put({"type":"timeline","val":list(timeline)})
                 # Push a clear instruction for the user
                 role_hint = {"approve_ttk":"Client","create_job":"Client","set_budget":"Client","fund":"Client",
                              "submit":"Provider","complete":"Evaluator","reject":"Evaluator"}.get(step, "")
-                _q.put({"type":"step","val":f"📱 请在 {role_hint} 钱包的 CAW App 中批准策略「{pname}」"})
+                if is_reused:
+                    _q.put({"type":"step","val":f"♻️ {step}: 复用已有策略，直接执行"})
+                else:
+                    _q.put({"type":"step","val":f"📱 请在 {role_hint} 钱包的 CAW App 中批准策略「{pname}」"})
 
             def on_tx(step, contract, func_sig, args):
                 entry = _build_timeline_entry("tx", step, contract, func_sig, args)

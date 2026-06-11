@@ -1,8 +1,9 @@
-# ERC-8183 六步流转测试报告（成功用例）
+# ERC-8183 六步流转测试报告 — Job #19（PACT_OPTIMIZED 模式）
 
-> 测试时间: 2026-06-10 21:20 UTC  
+> 测试时间: 2026-06-11 00:52-01:00 UTC  
 > 测试网络: Sepolia (Chain ID 11155111)  
 > 任务: Swap 0.1 ETH → USDT, 报酬 100 TTK  
+> 模式: **🟢 PACT_OPTIMIZED=true**（自动审批：3 次 Pact 审批 vs 原版 12 次）  
 > **结果: ✅ 全流程通过 — Evaluator 判 Complete，赏金已发放给 Provider**
 
 ---
@@ -17,7 +18,7 @@
 
 ---
 
-## 六状态流转图（本次 Job #17）
+## 六状态流转图（本次 Job #19）
 
 ```
   ┌──────────┐              ┌──────────┐              ┌──────────┐
@@ -40,6 +41,8 @@
                                                      └──────────┘
 ```
 
+**Pact 审批优化**: 本次采用 `PACT_OPTIMIZED=true` 模式，三个角色各持一个合并 Pact（`always_review=false` + 函数白名单）。Client 的 approve/createJob/setBudget/fund 四步共享一个 Pact，Provider 和 Evaluator 各一个独立 Pact。**Pact 审批 3 次后，内部 6 笔交易全部自动执行，无需逐笔在 CAW App 中批准。**
+
 ---
 
 ## Step 1: 授权托管合约使用代币 (approve_ttk)
@@ -48,120 +51,92 @@
 
 | 字段 | 值 |
 |------|-----|
-| Pact 名 | `ttk-approve-auto` |
-| 策略类型 | `contract_call` |
-| 允许链 | SETH |
-| 目标合约 | `0xCcb19a9e...` (TTK Token) |
-| 限制函数 | `0x095ea7b3` (仅 allow approve) |
-| 拒绝条件 | 单笔金额 > 200 TTK |
-| 审查模式 | `always_review: true` |
-| 完成条件 | tx_count ≥ 1 |
+| Pact 名 | `client-merged-19`（合并 Pact） |
+| 涵盖步骤 | approve + createJob + setBudget + fund |
+| 策略数 | 2（策略1: TTK approve，策略2: ERC-8183 托管操作）|
+| 策略1 审批模式 | 🟢 `always_review: false`（自动放行） |
+| 策略2 审批模式 | 🟢 `always_review: false`（自动放行） |
+| 策略2 函数白名单 | `createJob`, `setBudget`, `fund` |
+| 拒绝条件 | 单笔 > 200 TTK / 24h > 6 笔 |
+| 完成条件 | tx_count ≥ 4 |
 
 ### 链上交易 ✅
 
 | 字段 | 值 |
 |------|-----|
-| Tx Hash | `0x7d8922434e7b4c1b961f408aae4d8ed312a7480cf2e100508f222a960039b34a` |
-| 区块 | 11032304 |
+| Tx Hash | `0x1201319446e77145f04eab170403caf1421852b5b9dd9e42faf97a4bac538a88` |
+| 区块 | 11033343 |
 | 状态 | ✅ Success |
 | From | `0x7368...41Bc` (CAW Client) |
 | To | `0xCcb1...6cb3` (TTK Token) |
-| Gas | 24,371 |
+| Gas | 44,729 |
 | 函数 | `approve(address,uint256)` |
 | 参数 | spender=`0x5C46...dc59`, amount=`100000000000000000000` (100 TTK) |
 
-> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x7d8922434e7b4c1b961f408aae4d8ed312a7480cf2e100508f222a960039b34a)
+> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x1201319446e77145f04eab170403caf1421852b5b9dd9e42faf97a4bac538a88)
 
 ---
 
 ## Step 2: 在链上创建托管任务 (create_job)
 
-### Pact 内容
-
-| 字段 | 值 |
-|------|-----|
-| Pact 名 | `erc8183-client-auto` |
-| 策略类型 | `contract_call` |
-| 允许链 | SETH |
-| 目标合约 | `0x5C46deBd...` (ERC-8183 Escrow) |
-| 限制函数 | 不限 (所有函数) |
-| 拒绝条件 | amount > 1 ETH, tx_count > 5/24h |
-| 审查模式 | `always_review: true` |
-| 完成条件 | tx_count ≥ 3 |
-
 ### 链上交易 ✅
 
 | 字段 | 值 |
 |------|-----|
-| Tx Hash | `0x0950c217e549b5edfca088d4f10ea3d899318a92f07b783dc0964faa1a3fc902` |
-| 区块 | 11032309 |
+| Tx Hash | `0xaf53a1792f759df2ea766cbe6588d7b39f1457c6108ec5936cc71b41a22406cb` |
+| 区块 | 11033346 |
 | 状态 | ✅ Success |
 | From | `0x7368...41Bc` |
 | To | `0x5C46...dc59` (ERC-8183 Escrow) |
 | Gas | 148,907 |
 | 函数 | `createJob(address,address,uint256,string,address)` |
-| 参数 | provider=`0xe2b7...f32c`, evaluator=`0xf645...0d6d`, expiredAt=`1781731532`, desc=`"CAW Demo Job"`, hook=`0x0` |
+| 参数 | provider=`0xe2b7...f32c`, evaluator=`0xf645...0d6d`, expiredAt=`1781744001`, desc=`"CAW Demo Job"`, hook=`0x0` |
 
-**事件**: `JobCreated(jobId=17, client=0x7368..., provider=0xe2b7..., evaluator=0xf645...)`
+**事件**: `JobCreated(jobId=19, client=0x7368..., provider=0xe2b7..., evaluator=0xf645...)`
 
-> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x0950c217e549b5edfca088d4f10ea3d899318a92f07b783dc0964faa1a3fc902)
+> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0xaf53a1792f759df2ea766cbe6588d7b39f1457c6108ec5936cc71b41a22406cb)
 
 ---
 
 ## Step 3: 设置任务赏金预算 (set_budget)
 
-### Pact 内容
-
-| 字段 | 值 |
-|------|-----|
-| Pact 名 | `erc8183-client-17` |
-| 目标合约 | `0x5C46deBd...` (ERC-8183 Escrow) |
-| 完成条件 | tx_count ≥ 3 |
-
 ### 链上交易 ✅
 
 | 字段 | 值 |
 |------|-----|
-| Tx Hash | `0xd0bc31b700be9d87744ecc32d794846984f13337b1c666694b07a4dc5466b723` |
-| 区块 | 11032315 |
+| Tx Hash | `0x2f58a863b8db314705304508a585c94f76b856cb92aa19b2defdfdbb70c33939` |
+| 区块 | 11033349 |
 | 状态 | ✅ Success |
 | From | `0x7368...41Bc` |
 | To | `0x5C46...dc59` |
-| Gas | 44,083 |
+| Gas | 58,803 |
 | 函数 | `setBudget(uint256,uint256)` |
-| 参数 | jobId=17, amount=`100000000000000000000` (100 TTK) |
+| 参数 | jobId=19, amount=`100000000000000000000` (100 TTK) |
 
-**事件**: `BudgetSet(jobId=17, amount=100000000000000000000)`
+**事件**: `BudgetSet(jobId=19, amount=100000000000000000000)`
 
-> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0xd0bc31b700be9d87744ecc32d794846984f13337b1c666694b07a4dc5466b723)
+> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x2f58a863b8db314705304508a585c94f76b856cb92aa19b2defdfdbb70c33939)
 
 ---
 
 ## Step 4: 将赏金锁定到托管合约 (fund)
 
-### Pact 内容
-
-| 字段 | 值 |
-|------|-----|
-| Pact 名 | `erc8183-client-17` |
-| 目标合约 | `0x5C46deBd...` (ERC-8183 Escrow) |
-| 完成条件 | tx_count ≥ 3 |
-
 ### 链上交易 ✅
 
 | 字段 | 值 |
 |------|-----|
-| Tx Hash | `0x2b594594f25ed8c18e2f63238710b27bb68d398554285f536ba6c1755f5d15ae` |
-| 区块 | 11032319 |
+| Tx Hash | `0x1b52f9654f9106dab20c654a640f9248c2a1638764848c4866ed363f58a6b826` |
+| 区块 | 11033352 |
 | 状态 | ✅ Success |
 | From | `0x7368...41Bc` |
 | To | `0x5C46...dc59` |
+| Gas | 78,164 |
 | 函数 | `fund(uint256,uint256)` |
-| 参数 | jobId=17, expectedBudget=`100000000000000000000` (100 TTK) |
+| 参数 | jobId=19, expectedBudget=`100000000000000000000` (100 TTK) |
 
 **核心操作**: `IERC20(TTK).transferFrom(Client → Escrow, 100 TTK)`
 
-> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x2b594594f25ed8c18e2f63238710b27bb68d398554285f536ba6c1755f5d15ae)
+> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x1b52f9654f9106dab20c654a640f9248c2a1638764848c4866ed363f58a6b826)
 
 ---
 
@@ -171,30 +146,31 @@
 
 | 字段 | 值 |
 |------|-----|
-| Pact 名 | `erc8183-submit-17` |
+| Pact 名 | `provider-submit-19` |
 | 策略类型 | `contract_call` |
 | 允许链 | SETH |
 | 目标合约 | `0x5C46deBd...` |
 | 限制函数 | `0x2ecea788` (仅 allow submit) |
+| 审批模式 | 🟢 `always_review: false` |
 | 拒绝条件 | tx_count > 3/24h |
-| 审查模式 | `always_review: true` |
 | 完成条件 | tx_count ≥ 1 |
 
 ### 链上交易 ✅
 
 | 字段 | 值 |
 |------|-----|
-| Tx Hash | `0xbfcf93f29543b990eb31bcc0ed3073e34adb2014266846fad345ecffe688d074` |
-| 区块 | 11032325 |
+| Tx Hash | `0x2fa2f35f6a295ff07338437a9ff2462b27d40db4c3a3479fa52870a9ee1627be` |
+| 区块 | 11033370 |
 | 状态 | ✅ Success |
 | From | `0xe2b7...f32c` (CAW Provider) |
 | To | `0x5C46...dc59` |
+| Gas | 44,198 |
 | 函数 | `submit(uint256,bytes32)` |
-| 参数 | jobId=17, deliverable=`0xed6b302a00b4f815248a0abd40fdb27a2bbc05e16694da54ae326b3501d7b627` |
+| 参数 | jobId=19, deliverable=`0x6752ec7d06f058eeb1661044c983bc9bdcfae38cf4c0f08bfa13d4d95cbd9768` |
 
-**deliverable 来源**: `SHA256("17:swap:ETH:0.1:USDT:...")` — 基于任务内容的真实哈希
+**deliverable 来源**: `SHA256("19:swap:ETH:0.1:USDT:...")` — 基于任务内容的真实哈希
 
-> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0xbfcf93f29543b990eb31bcc0ed3073e34adb2014266846fad345ecffe688d074)
+> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x2fa2f35f6a295ff07338437a9ff2462b27d40db4c3a3479fa52870a9ee1627be)
 
 ---
 
@@ -210,27 +186,28 @@
 
 | 字段 | 值 |
 |------|-----|
-| Pact 名 | `erc8183-complete-17` |
-| 策略类型 | `contract_call` |
-| 目标合约 | `0x5C46deBd...` |
-| 限制函数 | `0xcd56b1b6` (仅 allow complete) |
+| Pact 名 | `evaluator-resolve-19` |
+| 策略数 | 2（策略1: complete 放款，策略2: reject 退款）|
+| 审批模式 | 🟢 `always_review: false` |
+| 限制函数 | `0xcd56b1b6` (complete), `0x6be1320b` (reject) |
 | 完成条件 | tx_count ≥ 1 |
 
 ### 链上交易 ✅
 
 | 字段 | 值 |
 |------|-----|
-| Tx Hash | `0x8ae9944f3a86eca5a4bb961859173abc0894684de9f0c2ce4a7f095415bd7e75` |
-| 区块 | 11032332 |
+| Tx Hash | `0xd6be420a417dd08b3eb200eae3860552b5c6ccdee730239e350cb7fbd9843c2d` |
+| 区块 | 11033379 |
 | 状态 | ✅ Success |
 | From | `0xf645...0D6D` (CAW Evaluator) |
 | To | `0x5C46...dc59` |
+| Gas | 62,945 |
 | 函数 | `complete(uint256,bytes32)` |
-| 参数 | jobId=17, reason=`0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
+| 参数 | jobId=19, reason=`0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
 
 **核心操作**: `IERC20(TTK).transfer(Escrow → Provider, 100 TTK)` — 赏金发放
 
-> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0x8ae9944f3a86eca5a4bb961859173abc0894684de9f0c2ce4a7f095415bd7e75)
+> 🔗 [Etherscan](https://sepolia.etherscan.io/tx/0xd6be420a417dd08b3eb200eae3860552b5c6ccdee730239e350cb7fbd9843c2d)
 
 ---
 
@@ -242,19 +219,19 @@
 
 | 时间点 | Client TTK | Escrow TTK | Provider TTK | 说明 |
 |--------|-----------|-----------|-------------|------|
-| 初始 (测试前) | 9,900 | 100 | 5,020 | 上次残留 100 在 Escrow |
-| Step 4 后 (fund) | **9,800** (-100) | **200** (+100) | 5,020 | Client→Escrow transferFrom |
-| Step 6 后 (complete) | 9,800 | **100** (-100) | **5,120** (+100) | Escrow→Provider transfer |
+| 初始 (Job #17 最终状态) | 9,800 | 100 | 5,120 | Escrow 中 100 TTK 来自 Job #16 遗留 |
+| Step 4 后 (fund) | **9,700** (-100) | **200** (+100) | 5,120 | Client→Escrow transferFrom |
+| Step 6 后 (complete) | 9,700 | **100** (-100) | **5,220** (+100) | Escrow→Provider transfer |
 
 ### 链上证据
 
 | 流转 | TTK 变化 | 验证 |
 |------|---------|------|
-| Client → Escrow (fund) | `-100` | Escrow 余额 100→200, Client 余额 9900→9800 ✅ |
-| Escrow → Provider (complete) | `+100` | Provider 余额 5020→5120, Escrow 余额 200→100 ✅ |
+| Client → Escrow (fund) | `-100` | Escrow 余额 100→200, Client 余额 9800→9700 ✅ |
+| Escrow → Provider (complete) | `+100` | Provider 余额 5120→5220, Escrow 余额 200→100 ✅ |
 | Net: Client → Provider | 100 TTK 成功转移 | ✅ |
 
-> ⚠️ Escrow 中剩余 100 TTK 来自前次测试 (Job #16) 的 fund，该 Job 未正确 resolve。
+> ⚠️ Escrow 中仍剩余 100 TTK，来自前次测试 (Job #16) 的 fund，该 Job 未正确 resolve（同 Job #17 报告中的遗留问题）。
 
 ### 链上余额实时查询
 
@@ -262,54 +239,49 @@
 
 | 角色 | 地址 | 当前 TTK 余额 | 余额查询链接 |
 |------|------|-------------|------------|
-| Client | `0x7368...41Bc` | 9,800 | [查看余额](https://sepolia.etherscan.io/token/0xCcb19a9e5a4e7eb8eD779c45FF7A6641a4f06cb3?a=0x736859c94664Dd29A1bdae8FA075e928b60541Bc) |
+| Client | `0x7368...41Bc` | 9,700 | [查看余额](https://sepolia.etherscan.io/token/0xCcb19a9e5a4e7eb8eD779c45FF7A6641a4f06cb3?a=0x736859c94664Dd29A1bdae8FA075e928b60541Bc) |
 | Escrow | `0x5C46...dc59` | 100 | [查看余额](https://sepolia.etherscan.io/token/0xCcb19a9e5a4e7eb8eD779c45FF7A6641a4f06cb3?a=0x5C46deBd8A308e69e56955A8eE647Bf75694dc59) |
-| Provider | `0xe2b7...f32c` | 5,120 | [查看余额](https://sepolia.etherscan.io/token/0xCcb19a9e5a4e7eb8eD779c45FF7A6641a4f06cb3?a=0xe2b749ce285b86ff058653336191dec2be50f32c) |
+| Provider | `0xe2b7...f32c` | 5,220 | [查看余额](https://sepolia.etherscan.io/token/0xCcb19a9e5a4e7eb8eD779c45FF7A6641a4f06cb3?a=0xe2b749ce285b86ff058653336191dec2be50f32c) |
 
 ### 如何在区块浏览器上自行验证
 
 1. **查看代币余额** — 打开上述"查看余额"链接，或访问 [TTK 代币页面](https://sepolia.etherscan.io/token/0xCcb19a9e5a4e7eb8eD779c45FF7A6641a4f06cb3)，在 "Holders" 标签页可看到所有持币地址及余额
-2. **查看转账记录** — 在代币页面点击任一地址，进入 "Token Transfers (ERC-20)" 标签页，可看到该地址所有 TTK 转入/转出记录，包括金额、对方地址、交易哈希
+2. **查看转账记录** — 在代币页面点击任一地址，进入 "Token Transfers (ERC-20)" 标签页，可看到该地址所有 TTK 转入/转出记录
 3. **追踪单笔转账** — 从上方交易汇总表点击任意 Tx Hash 链接，在交易详情页的 "ERC-20 Tokens Transferred" 区域可看到该笔交易触发的代币流转
 4. **命令行验证** — 也可通过 `cast` 直接查询：
    ```bash
    cast call 0xCcb19a9e5a4e7eb8eD779c45FF7A6641a4f06cb3 \
      "balanceOf(address)(uint256)" <地址> \
-     --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+     --rpc-url https://1rpc.io/sepolia
    ```
 
 ---
 
-## ETH / USDT Mock 互换说明
+## PACT_OPTIMIZED 模式效能对比
 
-本次测试中"Swap 0.1 ETH → USDT"为任务**描述**，未使用 SimpleSwapHook 进行链上 swap。原因：
-
-- ERC-8183 的 `createJob` 未指定 Hook 地址 (hook=`0x0`)
-- `setBudget` 使用简化版函数签名字 `setBudget(uint256,uint256)`，未传 `optParams`
-- SimpleSwapHook 需要在 `setBudget` 时传递 `(buyer, outputToken, outputAmount)` 编码参数，且 `submit` 时 Hook 会从 Provider 拉取产出代币
-
-**当前链上状态 (ETH Mock)**:
-
-| 账户 | ETH Mock 余额 |
-|------|-------------|
-| Client | 0 |
-| Provider | 10 ETH (之前铸造) |
-| Escrow | 0 |
-
-Provider 已持有 10 ETH mock，为后续集成 Hook 做好了准备。
+| 维度 | Job #17（原版） | Job #19（优化版） | 优化 |
+|------|----------------|-------------------|------|
+| Pact 数量 | 5-6 个 | 3 个 | **-50%** |
+| Pact 模板 | 每步独立 | 每角色合并 | 复用 |
+| always_review | true（全需审批） | false（自动放行） | **自动** |
+| 函数白名单 | 仅 approve 有 | 全部有 | **更安全** |
+| 预算来源 | 写死 1 ETH | 从用户输入推导 | **精准** |
+| Pact 审批次数 | 6 次 | 3 次 | **-50%** |
+| Contract Call 审批 | 6 次 | 0 次 | **-100%** |
+| **总用户操作** | **12 次** | **3 次** | **-75%** |
 
 ---
 
 ## 全流程交易汇总
 
-| # | 步骤 | Tx Hash | 区块 | From | 状态 |
-|---|------|---------|------|------|------|
-| 1 | approve | [`0x7d8922...`](https://sepolia.etherscan.io/tx/0x7d8922434e7b4c1b961f408aae4d8ed312a7480cf2e100508f222a960039b34a) | 11032304 | Client | ✅ |
-| 2 | createJob | [`0x0950c2...`](https://sepolia.etherscan.io/tx/0x0950c217e549b5edfca088d4f10ea3d899318a92f07b783dc0964faa1a3fc902) | 11032309 | Client | ✅ |
-| 3 | setBudget | [`0xd0bc31...`](https://sepolia.etherscan.io/tx/0xd0bc31b700be9d87744ecc32d794846984f13337b1c666694b07a4dc5466b723) | 11032315 | Client | ✅ |
-| 4 | fund | [`0x2b5945...`](https://sepolia.etherscan.io/tx/0x2b594594f25ed8c18e2f63238710b27bb68d398554285f536ba6c1755f5d15ae) | 11032319 | Client | ✅ |
-| 5 | submit | [`0xbfcf93...`](https://sepolia.etherscan.io/tx/0xbfcf93f29543b990eb31bcc0ed3073e34adb2014266846fad345ecffe688d074) | 11032325 | Provider | ✅ |
-| 6 | complete | [`0x8ae994...`](https://sepolia.etherscan.io/tx/0x8ae9944f3a86eca5a4bb961859173abc0894684de9f0c2ce4a7f095415bd7e75) | 11032332 | Evaluator | ✅ |
+| # | 步骤 | Tx Hash | 区块 | From | Gas | 状态 |
+|---|------|---------|------|------|-----|------|
+| 1 | approve | [`0x120131...`](https://sepolia.etherscan.io/tx/0x1201319446e77145f04eab170403caf1421852b5b9dd9e42faf97a4bac538a88) | 11033343 | Client | 44,729 | ✅ |
+| 2 | createJob | [`0xaf53a1...`](https://sepolia.etherscan.io/tx/0xaf53a1792f759df2ea766cbe6588d7b39f1457c6108ec5936cc71b41a22406cb) | 11033346 | Client | 148,907 | ✅ |
+| 3 | setBudget | [`0x2f58a8...`](https://sepolia.etherscan.io/tx/0x2f58a863b8db314705304508a585c94f76b856cb92aa19b2defdfdbb70c33939) | 11033349 | Client | 58,803 | ✅ |
+| 4 | fund | [`0x1b52f9...`](https://sepolia.etherscan.io/tx/0x1b52f9654f9106dab20c654a640f9248c2a1638764848c4866ed363f58a6b826) | 11033352 | Client | 78,164 | ✅ |
+| 5 | submit | [`0x2fa2f3...`](https://sepolia.etherscan.io/tx/0x2fa2f35f6a295ff07338437a9ff2462b27d40db4c3a3479fa52870a9ee1627be) | 11033370 | Provider | 44,198 | ✅ |
+| 6 | complete | [`0xd6be42...`](https://sepolia.etherscan.io/tx/0xd6be420a417dd08b3eb200eae3860552b5c6ccdee730239e350cb7fbd9843c2d) | 11033379 | Evaluator | 62,945 | ✅ |
 
 ---
 
@@ -318,10 +290,11 @@ Provider 已持有 10 ETH mock，为后续集成 Hook 做好了准备。
 | 指标 | 值 |
 |------|-----|
 | 总交易数 | 6 (全部链上确认) |
-| 总 Gas 消耗 | ~350,000 |
+| 总 Gas 消耗 | ~437,746 |
 | TTK 赏金 | 100 TTK 成功从 Client → Provider |
 | Job 状态 | 3 (Completed) |
-| CAW Pact 审批 | 6 次 Pact + 6 次 Contract Call = 12 次用户确认 |
+| CAW Pact 审批 | **3 次**（vs 原版 12 次 = **节省 75%**） |
+| 预算来源 | 用户输入 reward_amount=100 TTK → max_ttk=200; input_amount=0.1 ETH → max_eth=1.0 ETH |
 | Evaluator 判定 | Complete (LLM DeepSeek 自动评判) |
 
 ---

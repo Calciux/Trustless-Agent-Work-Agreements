@@ -1,0 +1,60 @@
+{
+  "name": "client-merged-{{job_id}}",
+  "intent": "ERC-8183 full client workflow: approve TTK spending by escrow, then create job, set budget, and fund the escrow",
+  "original_intent": "{{original_intent}}",
+  "execution_plan": "Approve TTK spending for escrow contract, then create ERC-8183 job with provider/evaluator, set reward budget, and fund the escrow",
+  "policies": [
+    {
+      "name": "ttk-approve",
+      "type": "contract_call",
+      "rules": {
+        "effect": "allow",
+        "when": {
+          "chain_in": ["{{chain}}"],
+          "target_in": [{
+            "chain_id": "{{chain}}",
+            "contract_addr": "{{ttk_addr}}",
+            "function_id": "0x095ea7b3"
+          }]
+        },
+        "deny_if": {
+          "amount_gt": "{{max_ttk}}"
+        },
+        "always_review": false
+      }
+    },
+    {
+      "name": "erc8183-escrow-ops",
+      "type": "contract_call",
+      "rules": {
+        "effect": "allow",
+        "when": {
+          "chain_in": ["{{chain}}"],
+          "target_in": [{
+            "chain_id": "{{chain}}",
+            "contract_addr": "{{escrow_addr}}",
+            "function_id": "0x41528812"
+          }, {
+            "chain_id": "{{chain}}",
+            "contract_addr": "{{escrow_addr}}",
+            "function_id": "0x9675dc17"
+          }, {
+            "chain_id": "{{chain}}",
+            "contract_addr": "{{escrow_addr}}",
+            "function_id": "0xa65e2cfd"
+          }]
+        },
+        "deny_if": {
+          "amount_gt": "{{max_eth}}",
+          "usage_limits": {
+            "rolling_24h": {"tx_count_gt": "{{max_tx}}"}
+          }
+        },
+        "always_review": false
+      }
+    }
+  ],
+  "completion_conditions": [
+    {"type": "tx_count", "threshold": "4"}
+  ]
+}

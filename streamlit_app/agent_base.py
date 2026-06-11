@@ -11,6 +11,7 @@ import json
 from config import (
     APPROVAL_POLL_INTERVAL, APPROVAL_MAX_WAIT,
     ESCROW_ADDR, TTK_ADDR, CHAIN,
+    PACT_OPTIMIZED,
 )
 from caw_types import (
     AgentRole, WorkflowStep, CawWallet, CawPactStatus,
@@ -103,6 +104,38 @@ class AgentBase(ABC):
             Updated JobContext.
         """
         max_retries = 3
+        role = self.get_role().value
+
+        # ── Optimized mode: reuse existing role-level Pact ──
+        if PACT_OPTIMIZED and role in context.role_pact_id:
+            pact_id = context.role_pact_id[role]
+            pact_json = context.role_pact_json.get(role, {})
+
+            # Save step-level references for display
+            context.pact_jsons[step_name] = pact_json
+            context.pacts[step_name] = pact_id
+            if on_pact_generated:
+                on_pact_generated(step_name, pact_json)
+
+            # Execute directly (skip Pact generation + submission + approval)
+            if on_tx_submitting:
+                on_tx_submitting(step_name, self._get_target_contract(step_name),
+                                 self._get_function_signature(step_name),
+                                 self._get_transaction_args(context, step_name))
+            tx_result = self._execute_onchain(pact_id, context, step_name)
+            if not tx_result.get("success"):
+                context.error_message = f"On-chain tx failed: {tx_result.get('stderr','')}"
+                context.current_step = WorkflowStep.FAILED
+                return context
+
+            context.transactions[step_name] = tx_result.get("tx_hash","")
+            context.current_step = WorkflowStep.TX_EXECUTING
+
+            # Validate
+            self._validate_result(context, step_name)
+            context.current_step = WorkflowStep.COMPLETED
+            return context
+
         for attempt in range(max_retries + 1):
             # 1. Generate Pact
             pact_json = self._generate_pact(context, step_name)
@@ -133,6 +166,13 @@ class AgentBase(ABC):
                 return context
 
             context.current_step = WorkflowStep.CAW_APPROVED
+
+            # ── Optimized mode: cache role Pact for reuse by subsequent steps ──
+            if PACT_OPTIMIZED:
+                pact_id = result.get("pact_id","")
+                if pact_id:
+                    context.role_pact_id[role] = pact_id
+                    context.role_pact_json[role] = pact_json
 
             # 4. Execute on-chain
             if on_tx_submitting:

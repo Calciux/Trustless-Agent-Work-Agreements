@@ -13,6 +13,7 @@ from config import (
     CHAIN, CLIENT_UUID, PROVIDER_UUID, EVALUATOR_UUID,
     SEL_APPROVE, SEL_CREATE_JOB, SEL_SET_BUDGET, SEL_FUND,
     SEL_SUBMIT, SEL_COMPLETE, SEL_REJECT,
+    PACT_OPTIMIZED, CLIENT_TOTAL_OPS,
 )
 from caw_types import PactTemplate, JobContext
 
@@ -34,6 +35,18 @@ class PactGenerator:
         ("provider", "submit"):    "pact_provider_submit.json",
         ("evaluator", "complete"): "pact_evaluator_resolve.json",
         ("evaluator", "reject"):   "pact_evaluator_resolve.json",
+    }
+
+    # Optimized mapping: all client steps → merged Pact, other roles unchanged
+    TEMPLATE_MAP_OPTIMIZED = {
+        ("client", "approve_ttk"): "optimized/pact_client_merged.json",
+        ("client", "create_task"): "optimized/pact_client_merged.json",
+        ("client", "create_job"):  "optimized/pact_client_merged.json",
+        ("client", "set_budget"):  "optimized/pact_client_merged.json",
+        ("client", "fund"):        "optimized/pact_client_merged.json",
+        ("provider", "submit"):    "optimized/pact_provider_submit.json",
+        ("evaluator", "complete"): "optimized/pact_evaluator_resolve.json",
+        ("evaluator", "reject"):   "optimized/pact_evaluator_resolve.json",
     }
 
     def __init__(self, templates_dir: str = None):
@@ -70,7 +83,9 @@ class PactGenerator:
         if cache_key in self._template_cache:
             return self._template_cache[cache_key]
 
-        filename = self.TEMPLATE_MAP.get((role, step))
+        # Select template map based on mode: optimized maps all client steps to one merged Pact
+        template_map = self.TEMPLATE_MAP_OPTIMIZED if PACT_OPTIMIZED else self.TEMPLATE_MAP
+        filename = template_map.get((role, step))
         if filename is None:
             raise ValueError(f"No template for role={role}, step={step}")
 
@@ -131,6 +146,7 @@ class PactGenerator:
             "{{ttk_addr}}":       TTK_ADDR,
             "{{escrow_addr}}":    ESCROW_ADDR,
             "{{job_id}}":         str(job_id),
+            "{{original_intent}}": overrides.get("original_intent", ""),
             "{{max_ttk}}":        overrides.get("max_ttk", "200000000000000000000"),
             "{{max_eth}}":        overrides.get("max_eth", "1000000000000000000"),
             "{{max_tx}}":         overrides.get("max_tx", "5"),
@@ -232,36 +248,74 @@ class PactGenerator:
         """
         Extract step-specific override values from JobContext.
 
-        E.g., for "approve_ttk": {ttk_amount, max_ttk}
-              for "create_job": {max_eth, max_tx, step_count}
-              for "complete":   {action="complete", selector="0xcd56b1b6"}
+        In optimized mode (PACT_OPTIMIZED=true):
+          - max_eth derives from context.input_amount (user's stated budget)
+          - step_count reflects all operations in the merged Pact
+          - original_intent is passed through for the Pact metadata
+
+        In original mode (PACT_OPTIMIZED=false):
+          - Uses hardcoded safe defaults (1 ETH cap, etc.)
         """
+        from decimal import Decimal, InvalidOperation
         overrides = {}
 
         # Common: chain is always available
         overrides["chain"] = "SETH"
 
+        # Derive budget from user intent (optimized mode) or use defaults
+        if PACT_OPTIMIZED:
+            # TTK budget from reward_amount
+            reward_str = context.reward_amount or "100"
+            try:
+                reward_wei = str(int(Decimal(reward_str) * Decimal(10**18)))
+            except (InvalidOperation, ValueError):
+                reward_wei = "100000000000000000000"
+            max_ttk = str(int(Decimal(reward_wei)) * 2)  # 2x buffer
+
+            # ETH budget from input_amount (e.g., "0.1" ETH → 0.1 * 10^18 with 10x buffer)
+            input_str = context.input_amount or "0.1"
+            try:
+                input_wei = str(int(Decimal(input_str) * Decimal(10**18) * 10))  # 10x safety
+            except (InvalidOperation, ValueError):
+                input_wei = "1000000000000000000"  # fallback: 1 ETH
+        else:
+            # Original mode: hardcoded safe defaults
+            reward_str = context.reward_amount or "100"
+            try:
+                reward_wei = str(int(Decimal(reward_str) * Decimal(10**18)))
+            except (InvalidOperation, ValueError):
+                reward_wei = "100000000000000000000"
+            max_ttk = str(int(Decimal(reward_wei)) * 2)
+            input_wei = "1000000000000000000"  # 1 ETH
+
+        # Pass through original intent for Pact metadata
+        overrides["original_intent"] = getattr(context, "original_intent", "") or ""
+
         if step == "approve_ttk":
-            amount = context.reward_amount or "100"
-            # Convert to wei-like (18 decimals for TTK) using Decimal for precision
-            from decimal import Decimal
-            ttk_amount = str(int(Decimal(amount) * Decimal(10**18)))
-            max_ttk = str(int(Decimal(amount) * Decimal(10**18) * 2))
-            overrides["ttk_amount"] = ttk_amount
+            overrides["ttk_amount"] = reward_wei
             overrides["max_ttk"] = max_ttk
+            # In optimized mode, the merged Pact also needs escrow policy values
+            if PACT_OPTIMIZED:
+                overrides["max_eth"] = input_wei
+                overrides["max_tx"] = str(CLIENT_TOTAL_OPS + 2)
+                overrides["step_count"] = str(CLIENT_TOTAL_OPS)
 
         elif step in ("create_job", "set_budget", "fund"):
-            overrides["max_eth"] = "1000000000000000000"  # 1 ETH in wei
-            overrides["max_tx"] = "5"
-            if step == "create_job":
-                overrides["step_count"] = "3"  # createJob + setBudget + fund
-            elif step == "set_budget":
-                overrides["step_count"] = "3"  # same Pact — keep at 3
-            elif step == "fund":
-                overrides["step_count"] = "3"  # same Pact — keep at 3
-                from decimal import Decimal
-                ttk_amount = str(int(Decimal(context.reward_amount or "100") * Decimal(10**18)))
-                overrides["fund_amount"] = ttk_amount
+            overrides["max_eth"] = input_wei
+            overrides["max_tx"] = str(CLIENT_TOTAL_OPS + 2)  # 4 ops + 2 buffer = 6
+            if PACT_OPTIMIZED:
+                # Merged Pact covers all 4 client steps
+                overrides["step_count"] = str(CLIENT_TOTAL_OPS)
+            else:
+                if step == "create_job":
+                    overrides["step_count"] = "3"  # createJob + setBudget + fund
+                elif step == "set_budget":
+                    overrides["step_count"] = "3"
+                elif step == "fund":
+                    overrides["step_count"] = "3"
+                    from decimal import Decimal
+                    ttk_amount = str(int(Decimal(context.reward_amount or "100") * Decimal(10**18)))
+                    overrides["fund_amount"] = ttk_amount
 
         elif step == "submit":
             # Generate a deterministic deliverable hash from job context

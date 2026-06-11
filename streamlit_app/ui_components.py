@@ -8,6 +8,7 @@ import streamlit as st
 from typing import Optional
 
 from caw_types import WorkflowStep
+from config import PACT_OPTIMIZED  # for mode badge
 
 
 # ---------------------------------------------------------------------------
@@ -25,10 +26,27 @@ STEPS = [
 
 
 def render_header():
-    """Render the top header bar with title and mock mode toggle."""
-    col1, col2, col3 = st.columns([4, 2, 1])
+    """Render the top header bar with title, mode badge, and mock mode toggle."""
+    col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
         st.title("🏦 Trustless Agent Work Agreements")
+    with col2:
+        if PACT_OPTIMIZED:
+            st.markdown(
+                '<div style="background:#e8f5e9;border:1px solid #4caf50;border-radius:8px;'
+                'padding:8px 12px;text-align:center;margin-top:8px">'
+                '<span style="color:#2e7d32;font-weight:600">🟢 自动审批模式</span><br>'
+                '<span style="font-size:0.75em;color:#666">Pact策略自动放行</span></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div style="background:#fff3e0;border:1px solid #ff9800;border-radius:8px;'
+                'padding:8px 12px;text-align:center;margin-top:8px">'
+                '<span style="color:#e65100;font-weight:600">🟠 手动审批模式</span><br>'
+                '<span style="font-size:0.75em;color:#666">每步需在CAW App批准</span></div>',
+                unsafe_allow_html=True,
+            )
     with col3:
         mock_mode = st.toggle(
             "Mock Mode",

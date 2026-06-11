@@ -1,0 +1,43 @@
+{
+  "name": "evaluator-resolve-{{job_id}}",
+  "intent": "ERC-8183 evaluator resolution: judge submitted work and either complete (release payment) or reject (refund)",
+  "original_intent": "{{original_intent}}",
+  "execution_plan": "LLM evaluates the provider's deliverable. If acceptable, call complete to release payment. If not, call reject to refund client.",
+  "policies": [
+    {
+      "name": "resolve-complete",
+      "type": "contract_call",
+      "rules": {
+        "effect": "allow",
+        "when": {
+          "chain_in": ["{{chain}}"],
+          "target_in": [{
+            "chain_id": "{{chain}}",
+            "contract_addr": "{{escrow_addr}}",
+            "function_id": "0xcd56b1b6"
+          }]
+        },
+        "always_review": false
+      }
+    },
+    {
+      "name": "resolve-reject",
+      "type": "contract_call",
+      "rules": {
+        "effect": "allow",
+        "when": {
+          "chain_in": ["{{chain}}"],
+          "target_in": [{
+            "chain_id": "{{chain}}",
+            "contract_addr": "{{escrow_addr}}",
+            "function_id": "0x6be1320b"
+          }]
+        },
+        "always_review": false
+      }
+    }
+  ],
+  "completion_conditions": [
+    {"type": "tx_count", "threshold": "1"}
+  ]
+}

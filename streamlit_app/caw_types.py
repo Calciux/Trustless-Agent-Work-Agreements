@@ -128,6 +128,9 @@ class JobContext:
     # Accumulated results
     pacts: dict[str, str] = field(default_factory=dict)          # step_name -> pact_id
     pact_jsons: dict[str, dict] = field(default_factory=dict)    # step_name -> pact_json
+    # Optimized mode: role-level Pact reuse cache
+    role_pact_id: dict[str, str] = field(default_factory=dict)          # role -> pact_id
+    role_pact_json: dict[str, dict] = field(default_factory=dict)       # role -> pact_json
     transactions: dict[str, str] = field(default_factory=dict)    # step_name -> tx_hash
     current_step: WorkflowStep = WorkflowStep.IDLE
     error_message: str = ""

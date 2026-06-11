@@ -84,6 +84,11 @@ ETH_MOCK_DECIMALS = 18
 # ---------------------------------------------------------------------------
 SKIP_CAW = os.getenv("SKIP_CAW", "true").lower() in ("true", "1", "yes")
 
+# Pact optimization: merge per-role Pacts + always_review=false + budget from intent
+# Set PACT_OPTIMIZED=true to enable auto-approval mode (fewer approvals)
+# Set PACT_OPTIMIZED=false (default) for the original step-by-step manual mode
+PACT_OPTIMIZED = os.getenv("PACT_OPTIMIZED", "false").lower() in ("true", "1", "yes")
+
 # LLM configuration
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "deepseek")  # deepseek | openai
 LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")

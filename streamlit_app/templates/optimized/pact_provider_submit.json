@@ -1,0 +1,32 @@
+{
+  "name": "provider-submit-{{job_id}}",
+  "intent": "ERC-8183 provider submission: submit work deliverable to escrow contract",
+  "original_intent": "{{original_intent}}",
+  "execution_plan": "Submit deliverable hash to the ERC-8183 escrow contract for the assigned job",
+  "policies": [
+    {
+      "name": "submit-work",
+      "type": "contract_call",
+      "rules": {
+        "effect": "allow",
+        "when": {
+          "chain_in": ["{{chain}}"],
+          "target_in": [{
+            "chain_id": "{{chain}}",
+            "contract_addr": "{{escrow_addr}}",
+            "function_id": "0x2ecea788"
+          }]
+        },
+        "deny_if": {
+          "usage_limits": {
+            "rolling_24h": {"tx_count_gt": 3}
+          }
+        },
+        "always_review": false
+      }
+    }
+  ],
+  "completion_conditions": [
+    {"type": "tx_count", "threshold": "1"}
+  ]
+}
