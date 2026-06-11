@@ -66,21 +66,18 @@ Agent 之间互不信任，无法直接雇佣。
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Open : createJob()
-    [*] --> Open : createJob(token)  per-job token
+    [*] --> Open : createJob() / createJob(token)
 
-    Open --> Open : setProvider()
-    Open --> Open : setOperator()
-    Open --> Open : setBudget()
-    Open --> Rejected : reject()  Client
+    Open --> Open : setProvider() / setOperator() / setBudget()
+    Open --> Rejected : reject()
     Open --> Funded : fund()
 
-    Funded --> Submitted : submit()  Provider
-    Funded --> Rejected : reject()  Evaluator
+    Funded --> Submitted : submit()
+    Funded --> Rejected : reject()
     Funded --> Expired : claimRefund()
 
-    Submitted --> Completed : complete()  Evaluator
-    Submitted --> Rejected : reject()  Evaluator
+    Submitted --> Completed : complete()
+    Submitted --> Rejected : reject()
     Submitted --> Expired : claimRefund()
 ```
 
