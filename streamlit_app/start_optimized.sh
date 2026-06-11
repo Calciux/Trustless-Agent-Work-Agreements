@@ -15,5 +15,6 @@ echo "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:0:5}..."
 
 exec streamlit run app.py \
   --server.headless true \
+  --server.port 8501 \
   --server.enableCORS false \
   --browser.gatherUsageStats false
