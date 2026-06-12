@@ -205,7 +205,7 @@ def _build_timeline_entry(kind, step_name, contract_addr, func_sig, args, pact_n
     if pact_detail:
         technical += f"\n\n---\n**策略详情**:{pact_detail}"
 
-    return {"kind": kind, "human": human, "technical": technical}
+    return {"kind": kind, "step": step_name, "human": human, "technical": technical}
 
 
 def _run_workflow(orch, text, ssm):
@@ -285,6 +285,8 @@ def _run_workflow(orch, text, ssm):
                 tx_hash = context.transactions.get(step, "")
                 if tx_hash:
                     _q.put({"type": "tx_hash", "step": step, "hash": tx_hash})
+                # Brief delay to let CAW settle before next step
+                time.sleep(2)
 
             # ── Bidding phase (A2A) — Real CAW EIP-712 signatures ──
             if is_bidding:
@@ -418,8 +420,8 @@ def _run_workflow(orch, text, ssm):
                 )  # Returns [job_id, winner_addr, opt_params_hex]
                 context.chain_data["bidding"]["opt_params"] = opt_params[2]
 
-                # --- Step 2.6: setProvider (EXT version with Hook verification) ---
-                _q.put({"type":"step","val":"🔄 set_provider: 链上锁定中标者并验证签名..."})
+                # --- Step 2.6: setProvider with EIP-712 signature ---
+                _q.put({"type":"step","val":"🔄 set_provider: BiddingHook EIP-712 链上验证..."})
                 orch.caw._switch(CawWallet.CLIENT)
                 context = orch.client.execute_step(context, "set_provider",
                     on_pact_generated=on_pact, on_tx_submitting=on_tx,
@@ -523,7 +525,7 @@ def main():
                     tx_hash = evt.get("hash", "")
                     tl = st.session_state.get("t_timeline", [])
                     for entry in reversed(tl):
-                        if entry.get("kind") == "tx" and step_name in entry.get("human", ""):
+                        if entry.get("kind") == "tx" and entry.get("step") == step_name:
                             entry["technical"] = entry.get("technical", "") + f"\n**Tx Hash**: `{tx_hash}`"
                             entry["tx_hash"] = tx_hash
                             break

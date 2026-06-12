@@ -59,19 +59,31 @@ contract BiddingHook is IACPHook {
         // 仅拦截带 optParams 的 setProvider；无 optParams 版本直接放行
         if (selector != SEL_SETPROVIDER_EXT) return;
 
-        // ---- 第一层解码 ----
-        // data = abi.encode(msg.sender, provider, optParams)
-        //        = abi.encode(address,   address,  bytes)
-        ( , address provider, bytes memory innerOptParams) =
-            abi.decode(data, (address, address, bytes));
+        // ---- 解码：支持两种格式 ----
+        // 格式A（包裹）: abi.encode(msg.sender, provider, abi.encode(sig, price))
+        // 格式B（未包裹）: abi.encode(sig, price) — 链上Escrow直接透传
+        bytes memory sig;
+        uint256 price;
+        address provider;
+        // 尝试作为未包裹格式解码 (bytes, uint256)
+        // 如果成功且data长度<=160字节，则为未包裹格式
+        if (data.length <= 256) {
+            (sig, price) = abi.decode(data, (bytes, uint256));
+            // 从签名恢复provider地址
+            provider = _recoverSigner(jobId, price, sig);
+        } else {
+            // 包裹格式: abi.decode as (address, address, bytes) then inner decode
+            {
+                (address dummy, address prov, bytes memory inner) =
+                    abi.decode(data, (address, address, bytes));
+                dummy;
+                provider = prov;
+                (sig, price) = abi.decode(inner, (bytes, uint256));
+                _verifyEIP712Signature(jobId, price, sig, provider);
+            }
+        }
 
-        // ---- 第二层解码 ----
-        // innerOptParams = abi.encode(signature, price)
-        //                = abi.encode(bytes,     uint256)
-        (bytes memory sig, uint256 price) =
-            abi.decode(innerOptParams, (bytes, uint256));
-
-        _verifyEIP712Signature(jobId, price, sig, provider);
+        require(provider != address(0), "BiddingHook: invalid signer");
 
         // ---- 存储竞价记录 ----
         bids[jobId] = Bid(provider, price);
@@ -104,6 +116,28 @@ contract BiddingHook is IACPHook {
         bytes32 domainSeparator = _buildDomainSeparator();
         bytes32 structHash = keccak256(abi.encode(BID_TYPEHASH, jobId, price));
         return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+    }
+
+    /**
+     * @dev 从EIP-712签名恢复签名者地址（不验证，仅恢复）
+     */
+    function _recoverSigner(
+        uint256 jobId,
+        uint256 price,
+        bytes memory sig
+    ) private view returns (address) {
+        require(sig.length == 65, "BiddingHook: invalid signature length");
+        bytes32 digest = _buildDigest(jobId, price);
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
+        if (v < 27) v += 27;
+        return ecrecover(digest, v, r, s);
     }
 
     /**

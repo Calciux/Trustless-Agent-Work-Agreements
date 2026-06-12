@@ -166,19 +166,22 @@ class CawInterface:
         return {"success": False, "error": f"Transaction approval timeout after {TX_POLL_MAX_WAIT}s"}
 
     def _verify_tx_onchain(self, tx_hash: str) -> bool:
-        """Quick on-chain verification. On failure, trust CAW's tx_hash."""
-        try:
-            from config import SEPOLIA_RPC_URL
-            cast_env = {**os.environ, **PROXY_ENV, "FOUNDRY_DISABLE_NIGHTLY_WARNING": "1"}
-            result = subprocess.run(
-                ["cast", "tx", tx_hash, "--rpc-url", SEPOLIA_RPC_URL],
-                capture_output=True, text=True, env=cast_env, timeout=5
-            )
-            if result.returncode == 0 and "blockNumber" in result.stdout:
-                return True
-        except Exception:
-            pass
-        # CAW confirmed the tx — trust it even if cast can't verify quickly
+        """Verify tx exists on-chain. Retries 3 times with 3s delay."""
+        from config import SEPOLIA_RPC_URL
+        for attempt in range(3):
+            try:
+                cast_env = {**os.environ, **PROXY_ENV, "FOUNDRY_DISABLE_NIGHTLY_WARNING": "1"}
+                result = subprocess.run(
+                    ["cast", "tx", tx_hash, "--rpc-url", SEPOLIA_RPC_URL],
+                    capture_output=True, text=True, env=cast_env, timeout=5
+                )
+                if result.returncode == 0 and "blockNumber" in result.stdout:
+                    return True
+            except Exception:
+                pass
+            if attempt < 2:
+                time.sleep(3)
+        # All retries exhausted — trust CAW as last resort
         return True
 
     def get_pact_status(self, wallet: CawWallet, pact_id: str) -> dict:
