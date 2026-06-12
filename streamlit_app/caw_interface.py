@@ -99,6 +99,7 @@ class CawInterface:
         cmd = ["caw", "tx", "call", "--pact-id", pact_id, "--chain-id", CHAIN,
                "--contract", contract_address, "--calldata", calldata,
                "--src-address", src, "--request-id", request_id]
+        print(f"[CAW CMD] pact={pact_id[:12]}... contract={contract_address[:12]}... calldata[:50]={calldata[:50]}... src={src[:12]}...")
         if value and value != "0":
             cmd += ["--value", value]
 
@@ -123,6 +124,8 @@ class CawInterface:
         # Failed on submission
         if tx_status in ("failed", "rejected", "error"):
             raw["success"] = False
+            raw["stderr"] = f"CAW rejected: {raw.get('message','') or raw.get('error','') or tx_status}"
+            print(f"[CAW ERROR] {raw['stderr']}")
             return raw
 
         # Unknown status — log and poll to be safe
@@ -157,6 +160,8 @@ class CawInterface:
             elif status in ("failed", "rejected", "error"):
                 result["success"] = False
                 result["tx_hash"] = ""
+                result["stderr"] = f"CAW tx {status}: {result.get('message','') or result.get('error','')}"
+                print(f"[CAW POLL ERROR] {result['stderr']}")
                 return result
 
             # Still pending: "pendingapproval", "processing", "pending", "submitted", etc.
@@ -166,9 +171,9 @@ class CawInterface:
         return {"success": False, "error": f"Transaction approval timeout after {TX_POLL_MAX_WAIT}s"}
 
     def _verify_tx_onchain(self, tx_hash: str) -> bool:
-        """Verify tx exists on-chain. Retries 3 times with 3s delay."""
+        """Wait until tx is confirmed on-chain. Up to 60 seconds."""
         from config import SEPOLIA_RPC_URL
-        for attempt in range(3):
+        for attempt in range(12):
             try:
                 cast_env = {**os.environ, **PROXY_ENV, "FOUNDRY_DISABLE_NIGHTLY_WARNING": "1"}
                 result = subprocess.run(
@@ -176,12 +181,12 @@ class CawInterface:
                     capture_output=True, text=True, env=cast_env, timeout=5
                 )
                 if result.returncode == 0 and "blockNumber" in result.stdout:
+                    print(f"[CAW] tx {tx_hash[:12]}... confirmed on-chain (attempt {attempt+1})")
                     return True
             except Exception:
                 pass
-            if attempt < 2:
-                time.sleep(3)
-        # All retries exhausted — trust CAW as last resort
+            time.sleep(5)
+        print(f"[CAW] tx {tx_hash[:12]}... NOT found on-chain after 60s, trusting CAW")
         return True
 
     def get_pact_status(self, wallet: CawWallet, pact_id: str) -> dict:

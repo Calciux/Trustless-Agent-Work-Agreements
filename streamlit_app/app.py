@@ -285,8 +285,6 @@ def _run_workflow(orch, text, ssm):
                 tx_hash = context.transactions.get(step, "")
                 if tx_hash:
                     _q.put({"type": "tx_hash", "step": step, "hash": tx_hash})
-                # Brief delay to let CAW settle before next step
-                time.sleep(2)
 
             # ── Bidding phase (A2A) — Real CAW EIP-712 signatures ──
             if is_bidding:
@@ -507,7 +505,7 @@ def main():
         chat = ssm.get_chat_history()
         if not chat:
             with st.chat_message("assistant"):
-                st.markdown('👋 试试：\"帮我发布一个 swap 任务，0.1 ETH 换成 USDT，报酬 100 TTK\"')
+                st.markdown('👋 试试：\"帮我发布一个 swap 任务，0.1 ETH 换成 USDT，报酬 100 TTK(mock测试代币)\"')
         else:
             render_chat_panel(chat)
 
@@ -520,9 +518,9 @@ def main():
                 if t == "step": st.session_state["t_step"] = evt["val"]
                 elif t == "timeline": st.session_state["t_timeline"] = list(evt["val"])
                 elif t == "tx_hash":
-                    # Update the matching tx entry with tx_hash
                     step_name = evt.get("step", "")
                     tx_hash = evt.get("hash", "")
+                    # Update timeline entry
                     tl = st.session_state.get("t_timeline", [])
                     for entry in reversed(tl):
                         if entry.get("kind") == "tx" and entry.get("step") == step_name:
@@ -530,6 +528,18 @@ def main():
                             entry["tx_hash"] = tx_hash
                             break
                     st.session_state["t_timeline"] = tl
+                    # Also push to tx_history sidebar
+                    txh = st.session_state.setdefault("tx_history", [])
+                    # Copy the full timeline entry for render_tx_history to parse
+                    matched_entry = None
+                    for e in reversed(tl):
+                        if e.get("step") == step_name:
+                            matched_entry = dict(e)
+                            break
+                    if matched_entry:
+                        matched_entry["tx_hash"] = tx_hash
+                        txh.append(matched_entry)
+                    st.session_state["tx_history"] = txh
                 elif t == "error": st.session_state["t_error"] = evt["val"]
                 elif t == "done": st.session_state["t_done"] = True
                 updated = True

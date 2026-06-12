@@ -258,7 +258,10 @@ class LLMClient:
         })
         response = self.chat(system, user)
         if response.parsed_json:
-            return response.parsed_json
+            result = response.parsed_json
+            if not result.get("reasoning"):
+                result["reasoning"] = "交付物验证未通过：提交的哈希为占位符，无实际工作证明" if result.get("action") == "reject" else "交付物验证通过，符合任务要求"
+            return result
         return {"action": "complete", "reason_hash": "0x00", "reasoning": "Default accept"}
 
     # ------------------------------------------------------------------

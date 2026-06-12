@@ -52,8 +52,7 @@
             "function_id": "0xa65e2cfd"
           }, {
             "chain_id": "{{chain}}",
-            "contract_addr": "{{bidding_hook_addr}}",
-            "function_id": "0xdc08fb1d"
+            "contract_addr": "{{bidding_hook_addr}}"
           }]
         },
         "deny_if": {

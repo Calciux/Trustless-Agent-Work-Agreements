@@ -282,7 +282,8 @@ def render_action_buttons():
             st.info(
                 "**How to use:**\n\n"
                 "1. Type a task description in natural language\n"
-                "   e.g., 'Create a swap task: 0.1 ETH → USDT, reward 100 TTK'\n"
+                "   e.g., 'Create a swap task: 0.1 ETH → USDT, reward 100 TTK(mock test token)'\n"
+               "   💡 TTK 为 MockERC20 测试代币，仅限 Sepolia 测试网使用。\n"
                 "2. The AI parses your intent and generates Pact policies\n"
                 "3. Pact is submitted to CAW for approval\n"
                 "4. Once approved, on-chain transactions execute\n\n"

@@ -101,6 +101,7 @@ SKIP_CAW = os.getenv("SKIP_CAW", "true").lower() in ("true", "1", "yes")
 # Pact optimization: merge per-role Pacts + always_review=false + budget from intent
 # Set PACT_OPTIMIZED=true to enable auto-approval mode (fewer approvals)
 # Set PACT_OPTIMIZED=false (default) for the original step-by-step manual mode
+# PACT_OPTIMIZED causes CAW timing issues — disabled for now
 PACT_OPTIMIZED = os.getenv("PACT_OPTIMIZED", "false").lower() in ("true", "1", "yes")
 
 # LLM configuration
