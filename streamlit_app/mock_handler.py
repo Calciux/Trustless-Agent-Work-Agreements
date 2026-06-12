@@ -195,6 +195,9 @@ class MockHandler:
             task_type = "approve_only"
             output_token = ""
 
+        # Always use bidding mode — every task goes through A2A open-bidding
+        task_type = "bidding"
+
         # Detect action
         if "submit" in msg_lower or "提交" in user_message:
             action = "submit"

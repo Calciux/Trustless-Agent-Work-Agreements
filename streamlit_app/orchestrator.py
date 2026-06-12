@@ -11,6 +11,7 @@ from typing import Optional
 
 from config import (
     SKIP_CAW, CLIENT_TOTAL_OPS, PROVIDER_TOTAL_OPS, EVALUATOR_TOTAL_OPS,
+    BIDDING_HOOK_ADDR,
 )
 from caw_types import (
     WorkflowStep, AgentRole, JobContext, ParsedIntent,
@@ -35,7 +36,8 @@ class AgentOrchestrator:
         caw_interface,
         pact_generator,
         session,
-        mock_handler=None
+        mock_handler=None,
+        bidding_agent=None
     ):
         self.client = client_agent
         self.provider = provider_agent
@@ -46,6 +48,7 @@ class AgentOrchestrator:
         self.session = session
         self.mock_handler = mock_handler
         self.error_handler = ErrorHandler()
+        self.bidding_agent = bidding_agent
 
         # Inject error_handler into agents for retry logic (W6 fix)
         self.client.error_handler = self.error_handler
@@ -207,6 +210,14 @@ class AgentOrchestrator:
             evaluator_uuid=EVALUATOR_UUID,
             current_step=WorkflowStep.INTENT_PARSED,
         )
+
+        # Set up bidding context when task_type is "bidding"
+        if intent.task_type == "bidding":
+            ctx.chain_data["bidding"] = {
+                "is_bidding": True,
+                "hook_addr": BIDDING_HOOK_ADDR,
+            }
+
         return ctx
 
     # ------------------------------------------------------------------

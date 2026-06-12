@@ -10,8 +10,8 @@ if str(_THIS_DIR) not in sys.path:
 
 st.set_page_config(page_title="Trustless Agent", page_icon="🏦", layout="wide")
 
-from config import SKIP_CAW, PACT_OPTIMIZED
-from caw_types import WorkflowStep
+from config import SKIP_CAW, PACT_OPTIMIZED, PROVIDER_ADDR, PROVIDER2_ADDR, BIDDING_HOOK_ADDR
+from caw_types import WorkflowStep, CawWallet
 from session_state import SessionStateManager
 from mock_handler import MockHandler
 from llm_client import LLMClient
@@ -22,6 +22,7 @@ from client_agent import ClientAgent
 from provider_agent import ProviderAgent
 from evaluator_agent import EvaluatorAgent
 from orchestrator import AgentOrchestrator
+from bidding_agent import BiddingAgent
 from ui_components import (render_header, render_chat_panel, render_input_box,
     render_progress_steps, render_role_status_cards, render_tx_history,
     render_log_expander, render_mock_banner, render_action_buttons)
@@ -52,9 +53,11 @@ def make_orch(ssm):
     pg = PactGenerator()
     caw = CawInterface(mock_handler=mock_h)
     err = ErrorHandler()
+    bidding = BiddingAgent(llm_client=llm)
     orch = AgentOrchestrator(ClientAgent(llm=llm,caw=caw,pact_gen=pg),
         ProviderAgent(llm=llm,caw=caw,pact_gen=pg),
-        EvaluatorAgent(llm=llm,caw=caw,pact_gen=pg),llm,caw,pg,ssm)
+        EvaluatorAgent(llm=llm,caw=caw,pact_gen=pg),llm,caw,pg,ssm,
+        bidding_agent=bidding)
     orch.error_handler=err
     return orch
 
@@ -65,6 +68,7 @@ _CONTRACT_NAMES = {
     "0x5c46debd8a308e69e56955a8ee647bf75694dc59": "ERC-8183 托管合约",
     "0x8c7d953c2c897e471bf5a7be8532af79258e0beb": "USDT 测试币",
     "0x94022198f8497f98a47d24b754a602ad2a97fe99": "ETH 测试币",
+    "0xce54fccd18ebb720e81530ad60797bfd00305533": "BiddingHook 竞价钩子(EIP-712)",
 }
 
 _FUNC_NAMES = {
@@ -75,6 +79,7 @@ _FUNC_NAMES = {
     "0x2ecea788": "submit(提交成果)",
     "0xcd56b1b6": "complete(放款)",
     "0x6be1320b": "reject(退款)",
+    "0xc9a84bb9": "setProvider(设置中标者)",
 }
 
 _STEP_HUMAN = {
@@ -108,6 +113,28 @@ _STEP_HUMAN = {
     "reject": (
         "裁决者验收不通过，退款给客户",
         "裁决者（Evaluator）判定工作不合格或超时，将托管合约中的赏金退回给客户。"
+    ),
+    "bid_sign_a": (
+        "Provider A 签名报价",
+        "Provider A 用 CAW 钱包对 (jobId, 80 TTK) 做 EIP-712 签名，"
+        "证明「我确实愿意以 80 TTK 接这个单」。"
+        "这步是链下操作，不产生链上交易。"
+    ),
+    "bid_sign_b": (
+        "Provider B 签名报价",
+        "Provider B 签名报价 100 TTK，与 A 形成竞争。"
+        "链下 EIP-712 签名，不产生链上交易。"
+    ),
+    "select_winner": (
+        "Client Agent 比价选优",
+        "LLM 比较两份报价：Provider A 报 80 TTK vs Provider B 报 100 TTK "
+        "→ 自动选择最低价 Provider A（80 TTK）。"
+    ),
+    "set_provider": (
+        "链上锁定中标者",
+        "调用 setProvider(jobId, winner, optParams) → "
+        "BiddingHook.beforeAction 验证 EIP-712 签名是否由 winner 签发 → "
+        "验证通过后 Escrow 正式设置 Provider 为中标者。"
     ),
 }
 
@@ -153,7 +180,9 @@ def _build_timeline_entry(kind, step_name, contract_addr, func_sig, args, pact_n
                     pact_detail += f"\n  └─ 拒绝条件: {', '.join(limits)}"
     
     # Human layer
-    if kind == "pact":
+    if kind == "info":
+        human = f"ℹ️ **{human_title}**\n\n{human_desc}"
+    elif kind == "pact":
         if is_reused:
             human = f"♻️ **复用已有策略：{human_title}**\n\n{human_desc}\n\n✅ 策略已批准，直接执行"
         else:
@@ -214,7 +243,7 @@ def _run_workflow(orch, text, ssm):
                 _q.put({"type":"timeline","val":list(timeline)})
                 # Push a clear instruction for the user
                 role_hint = {"approve_ttk":"Client","create_job":"Client","set_budget":"Client","fund":"Client",
-                             "submit":"Provider","complete":"Evaluator","reject":"Evaluator"}.get(step, "")
+                             "set_provider":"Client","submit":"Provider","complete":"Evaluator","reject":"Evaluator"}.get(step, "")
                 if is_reused:
                     _q.put({"type":"step","val":f"♻️ {step}: 复用已有策略，直接执行"})
                 else:
@@ -225,21 +254,198 @@ def _run_workflow(orch, text, ssm):
                 timeline.append(entry)
                 _q.put({"type":"timeline","val":list(timeline)})
 
-            for step in ["approve_ttk", "create_job", "set_budget", "fund"]:
+            # Always use bidding mode — every task goes through A2A open-bidding
+            is_bidding = True
+            # Ensure bidding context is set (client_agent checks this)
+            if "bidding" not in context.chain_data:
+                context.chain_data["bidding"] = {"is_bidding": True}
+            else:
+                context.chain_data["bidding"]["is_bidding"] = True
+            if is_bidding:
+                client_steps = ["approve_ttk", "create_job"]
+            else:
+                client_steps = ["approve_ttk", "create_job", "set_budget", "fund"]
+
+            for step in client_steps:
                 _q.put({"type":"step","val":f"🔄 {step}: 正在生成安全策略..."})
                 context = orch.client.execute_step(context, step, on_pact_generated=on_pact, on_tx_submitting=on_tx)
                 if context.current_step == WorkflowStep.FAILED:
                     err_msg = context.error_message or f"{step} 失败"
-                    # Build a clear stop reason for the user
                     step_names_cn = {
                         "approve_ttk": "授权代币", "create_job": "创建任务",
-                        "set_budget": "设置预算", "fund": "锁定资金"
+                        "set_budget": "设置预算", "fund": "锁定资金",
+                        "set_provider": "链上锁定中标者"
                     }
                     cn = step_names_cn.get(step, step)
-                    _q.put({"type":"error","val":f"❌ 流程在「{cn}」步骤停止\n\n{err_msg}\n\n💡 可能原因：链上条件不满足、CAW 策略拒绝、或 gas 不足。请检查 CAW App 中的错误详情。"})
+                    _q.put({"type":"error","val":f"❌ 流程在「{cn}」步骤停止\\n\\n{err_msg}\\n\\n💡 可能原因：链上条件不满足、CAW 策略拒绝、或 gas 不足。请检查 CAW App 中的错误详情。"})
                     _q.put({"type":"done","val":None})
                     return
                 _q.put({"type":"step","val":f"📱 {step} 已提交 — 请在 CAW App 中批准"})
+                # Push tx hash to queue for sidebar history
+                tx_hash = context.transactions.get(step, "")
+                if tx_hash:
+                    _q.put({"type": "tx_hash", "step": step, "hash": tx_hash})
+
+            # ── Bidding phase (A2A) — Real CAW EIP-712 signatures ──
+            if is_bidding:
+                # Helper: wait for a sign Pact using correct wallet
+                def _wait_sign_pact(wallet, pact_id, label, timeout=300):
+                    orch.caw._switch(wallet)
+                    elapsed = 0
+                    while elapsed < timeout:
+                        result = orch.caw._run(["caw", "pact", "show", "--pact-id", pact_id])
+                        status = result.get("result", result).get("status", "")
+                        if status in ("active", "approved", "completed"):
+                            return True
+                        if status in ("rejected", "failed", "revoked", "expired"):
+                            return False
+                        time.sleep(5)
+                        elapsed += 5
+                    return False
+
+                bidding_ctx = context.chain_data.get("bidding", {})
+                job_id = context.job_id or 0
+
+                # Price constants (in wei: 80 TTK = 80 * 10**18)
+                PRICE_A = 80 * 10**18
+                PRICE_B = 100 * 10**18
+
+                # --- Step 2.4a: Create sign Pacts for Provider wallets ---
+                # Message_sign Pacts with domain_match auto-approval (unpaired wallets → auto-active)
+                SIGN_PACT_DEF_A = {
+                    "name": f"bid-sign-provider-{job_id}",
+                    "intent": f"Sign bidding quotes for job {job_id}",
+                    "original_intent": f"Sign bidding quotes for job {job_id}",
+                    "execution_plan": f"EIP-712 sign Bid(jobId,price) for BiddingHook",
+                    "policies": [{
+                        "name": "bid-sign",
+                        "type": "message_sign",
+                        "rules": {
+                            "effect": "allow",
+                            "when": {
+                                "domain_match": [
+                                    {"param_name": "name", "op": "eq", "value": "BiddingHook"},
+                                    {"param_name": "verifyingContract", "op": "eq", "value": BIDDING_HOOK_ADDR}
+                                ]
+                            },
+                            "deny_if": {
+                                "usage_limits": {"rolling_24h": {"request_count_gt": 20}}
+                            },
+                            "always_review": False
+                        }
+                    }],
+                    "completion_conditions": [{"type": "tx_count", "threshold": "10"}]
+                }
+                SIGN_PACT_DEF_B = dict(SIGN_PACT_DEF_A)
+                SIGN_PACT_DEF_B["name"] = f"bid-sign-provider2-{job_id}"
+
+                _q.put({"type":"step","val":"📋 Provider A — 创建签名策略..."})
+                orch.caw._switch(CawWallet.PROVIDER)
+                result_a = orch.caw.create_pact(CawWallet.PROVIDER, SIGN_PACT_DEF_A)
+                pact_id_a = result_a.get("pact_id", "")
+                if not pact_id_a:
+                    _q.put({"type":"error","val":f"❌ Provider A 签名策略创建失败: {result_a}"})
+                    _q.put({"type":"done","val":None})
+                    return
+                _q.put({"type":"step","val":f"📋 Provider A 签名策略: {pact_id_a[:12]}..."})
+
+                _q.put({"type":"step","val":"📋 Provider B — 创建签名策略..."})
+                orch.caw._switch(CawWallet.PROVIDER2)
+                result_b = orch.caw.create_pact(CawWallet.PROVIDER2, SIGN_PACT_DEF_B)
+                pact_id_b = result_b.get("pact_id", "")
+                if not pact_id_b:
+                    _q.put({"type":"error","val":f"❌ Provider B 签名策略创建失败: {result_b}"})
+                    _q.put({"type":"done","val":None})
+                    return
+                _q.put({"type":"step","val":f"📋 Provider B 签名策略: {pact_id_b[:12]}..."})
+
+                # Unpaired wallets auto-activate — brief wait
+                _q.put({"type":"step","val":"⏳ 等待签名策略自动激活 (未配对钱包)...)"})
+                if not _wait_sign_pact(CawWallet.PROVIDER, pact_id_a, "Provider A", timeout=60):
+                    _q.put({"type":"error","val":"❌ Provider A 签名策略未激活"})
+                    _q.put({"type":"done","val":None})
+                    return
+                if not _wait_sign_pact(CawWallet.PROVIDER2, pact_id_b, "Provider B", timeout=60):
+                    _q.put({"type":"error","val":"❌ Provider B 签名策略未激活"})
+                    _q.put({"type":"done","val":None})
+                    return
+                _q.put({"type":"step","val":"✅ 签名策略已激活，开始 CAW 签名..."})
+
+                # --- Step 2.5a: Provider A CAW sign ---
+                _q.put({"type":"step","val":"🔏 Provider A CAW 签名报价 (80 TTK) — EIP-712..."})
+                orch.caw._switch(CawWallet.PROVIDER)
+                bid_a = orch.bidding_agent.sign_bid_caw(job_id, PRICE_A, pact_id_a, src_address=PROVIDER_ADDR)
+                info_a = _build_timeline_entry("info", "bid_sign_a", PROVIDER_ADDR, "", [],
+                    pact_name="报价: 80 TTK (CAW EIP-712)")
+                info_a["technical"] = (f"**签名者 (CAW)**: `{bid_a['signer'][:16]}...`\n"
+                    f"**报价**: 80 TTK\n**签名**: `{bid_a['signature'][:20]}...` (65 bytes EIP-712)")
+                timeline.append(info_a)
+                _q.put({"type":"timeline","val":list(timeline)})
+
+                # --- Step 2.5b: Provider B CAW sign ---
+                _q.put({"type":"step","val":"🔏 Provider B CAW 签名报价 (100 TTK) — EIP-712..."})
+                orch.caw._switch(CawWallet.PROVIDER2)
+                bid_b = orch.bidding_agent.sign_bid_caw(job_id, PRICE_B, pact_id_b, src_address=PROVIDER2_ADDR)
+                info_b = _build_timeline_entry("info", "bid_sign_b", PROVIDER2_ADDR, "", [],
+                    pact_name="报价: 100 TTK (EIP-712)")
+                info_b["technical"] = (f"**签名者**: `{bid_b['signer'][:16]}...`\n"
+                    f"**报价**: 100 TTK\n**签名**: `{bid_b['signature'][:20]}...` (EIP-712)")
+                timeline.append(info_b)
+                _q.put({"type":"timeline","val":list(timeline)})
+
+                # --- Step 2.5c: LLM selects winner ---
+                _q.put({"type":"step","val":"🧠 LLM 正在比较 CAW 签名报价..."})
+                winner = orch.bidding_agent.select_winner([bid_a, bid_b], context)
+                winner_addr = winner["winner_addr"]
+                winner_price = winner["winner_price"]
+                winner_sig = winner["winner_sig"]
+                info_c = _build_timeline_entry("info", "select_winner", "", "", [],
+                    pact_name=f"选中: {winner_addr[:10]}... @ {int(winner_price)/1e18} TTK")
+                info_c["technical"] = (f"**中标者**: `{winner_addr}`\n"
+                    f"**中标价**: {int(winner_price)/1e18} TTK\n"
+                    f"**签名 (CAW EIP-712)**: `{winner_sig[:20]}...`\n"
+                    f"**对比**: Provider A=80 TTK, Provider B=100 TTK")
+                timeline.append(info_c)
+                _q.put({"type":"timeline","val":list(timeline)})
+
+                context.chain_data["bidding"]["winner_addr"] = winner_addr
+                context.chain_data["bidding"]["winner_price"] = winner_price
+                context.chain_data["bidding"]["winner_sig"] = winner_sig
+
+                # Build optParams for BiddingHook on-chain verification
+                opt_params = orch.bidding_agent.build_set_provider_args(
+                    job_id, winner_addr, winner_sig, winner_price
+                )  # Returns [job_id, winner_addr, opt_params_hex]
+                context.chain_data["bidding"]["opt_params"] = opt_params[2]
+
+                # --- Step 2.6: setProvider (EXT version with Hook verification) ---
+                _q.put({"type":"step","val":"🔄 set_provider: 链上锁定中标者并验证签名..."})
+                orch.caw._switch(CawWallet.CLIENT)
+                context = orch.client.execute_step(context, "set_provider",
+                    on_pact_generated=on_pact, on_tx_submitting=on_tx,
+                    override_args=opt_params)
+                if context.current_step == WorkflowStep.FAILED:
+                    _q.put({"type":"error","val":f"❌ setProvider 失败: {context.error_message or ''}"})
+                    _q.put({"type":"done","val":None})
+                    return
+                tx_hash = context.transactions.get("set_provider", "")
+                if tx_hash:
+                    _q.put({"type": "tx_hash", "step": "set_provider", "hash": tx_hash})
+
+                for step in ["set_budget", "fund"]:
+                    _q.put({"type":"step","val":f"🔄 {step}: 正在执行..."})
+                    context = orch.client.execute_step(context, step,
+                        on_pact_generated=on_pact, on_tx_submitting=on_tx)
+                    if context.current_step == WorkflowStep.FAILED:
+                        err_msg = context.error_message or f"{step} 失败"
+                        cn = step_names_cn.get(step, step)
+                        _q.put({"type":"error","val":f"❌ 流程在「{cn}」步骤停止\\n\\n{err_msg}"})
+                        _q.put({"type":"done","val":None})
+                        return
+                    _q.put({"type":"step","val":f"📱 {step} 已提交"})
+                    tx_hash = context.transactions.get(step, "")
+                    if tx_hash:
+                        _q.put({"type": "tx_hash", "step": step, "hash": tx_hash})
 
             ssm.update_workflow(client_progress=100.0)
             _q.put({"type":"step","val":"✅ 客户流程完成！"})
@@ -255,6 +461,9 @@ def _run_workflow(orch, text, ssm):
                 return
             ssm.update_workflow(provider_progress=100.0)
             _q.put({"type":"step","val":"✅ 服务商已提交工作成果！"})
+            tx_hash = context.transactions.get("submit", "")
+            if tx_hash:
+                _q.put({"type": "tx_hash", "step": "submit", "hash": tx_hash})
 
             # ── Evaluator: LLM judge → complete or reject ──
             _q.put({"type":"step","val":"🔍 切换到 Evaluator（裁决者）角色..."})
@@ -275,6 +484,9 @@ def _run_workflow(orch, text, ssm):
                 return
             ssm.update_workflow(evaluator_progress=100.0)
             _q.put({"type":"step","val":"✅ 裁决完成！全流程结束。"})
+            tx_hash = context.transactions.get(eval_action, "")
+            if tx_hash:
+                _q.put({"type": "tx_hash", "step": eval_action, "hash": tx_hash})
         else:
             _q.put({"type":"error","val":f"不支持: {role}/{action}"})
         _q.put({"type":"done","val":None})
@@ -305,6 +517,17 @@ def main():
                 t = evt["type"]
                 if t == "step": st.session_state["t_step"] = evt["val"]
                 elif t == "timeline": st.session_state["t_timeline"] = list(evt["val"])
+                elif t == "tx_hash":
+                    # Update the matching tx entry with tx_hash
+                    step_name = evt.get("step", "")
+                    tx_hash = evt.get("hash", "")
+                    tl = st.session_state.get("t_timeline", [])
+                    for entry in reversed(tl):
+                        if entry.get("kind") == "tx" and step_name in entry.get("human", ""):
+                            entry["technical"] = entry.get("technical", "") + f"\n**Tx Hash**: `{tx_hash}`"
+                            entry["tx_hash"] = tx_hash
+                            break
+                    st.session_state["t_timeline"] = tl
                 elif t == "error": st.session_state["t_error"] = evt["val"]
                 elif t == "done": st.session_state["t_done"] = True
                 updated = True
@@ -325,6 +548,11 @@ def main():
                     with st.expander(entry["human"], expanded=(i == len(timeline) - 1)):
                         st.caption("🔧 技术参数 (Technical Details)")
                         st.code(entry["technical"], language=None)
+                elif entry["kind"] == "info":
+                    with st.expander(entry["human"], expanded=(i == len(timeline) - 1)):
+                        if entry.get("technical"):
+                            st.caption("🔧 技术参数 (Technical Details)")
+                            st.code(entry["technical"], language=None)
                 else:
                     with st.expander(entry["human"], expanded=(i == len(timeline) - 1)):
                         st.caption("🔧 技术参数 (Technical Details)")
@@ -349,9 +577,15 @@ def main():
             if error:
                 st.error(f"❌ {error}")
             for i, entry in enumerate(timeline):
-                with st.expander(entry["human"], expanded=False):
-                    st.caption("🔧 技术参数 (Technical Details)")
-                    st.code(entry["technical"], language=None)
+                if entry["kind"] == "info":
+                    with st.expander(entry["human"], expanded=False):
+                        if entry.get("technical"):
+                            st.caption("🔧 技术参数 (Technical Details)")
+                            st.code(entry["technical"], language=None)
+                else:
+                    with st.expander(entry["human"], expanded=False):
+                        st.caption("🔧 技术参数 (Technical Details)")
+                        st.code(entry["technical"], language=None)
 
         user_input = render_input_box()
         render_action_buttons()
@@ -359,10 +593,13 @@ def main():
         render_log_expander(wf.log_entries if wf else [])
 
     with right:
-        summary = orch.get_workflow_summary()
-        render_progress_steps(summary.get("current_step",0))
-        render_role_status_cards(0,0,0)
-        render_tx_history(summary.get("tx_history",[]))
+        # Build tx history from timeline (tx kind entries only)
+        timeline = st.session_state.get("t_timeline", [])
+        tx_list = []
+        for entry in timeline:
+            if entry.get("kind") == "tx":
+                tx_list.append(entry)
+        render_tx_history(tx_list)
 
     # ── Handle new input ──
     if user_input and user_input.strip() and not st.session_state.get("t_running"):

@@ -7,10 +7,11 @@ import {IERC165} from "../interfaces/IERC165.sol";
 /**
  * @title BiddingHook
  * @notice 开放竞价 Hook：Client 创建 provider=0 的 Job，多个 Provider
- *         链下签名报价，Client 选出最优者调用 setProvider(jobId, winner, sig+price)
+ *         链下 EIP-712 签名报价，Client 选出最优者调用 setProvider(jobId, winner, sig+price)
  * @dev 仅拦截 SEL_SETPROVIDER_EXT (带 optParams 的 setProvider 重载)
- *      beforeAction 做签名验证 + 存储竞价信息
+ *      beforeAction 做 EIP-712 签名验证 + 存储竞价信息
  *      afterAction 为空操作
+ *      v2: 升级到 EIP-712 签名（从 EIP-191），兼容 CAW message_sign 自动审批
  */
 contract BiddingHook is IACPHook {
     /**
@@ -30,15 +31,25 @@ contract BiddingHook is IACPHook {
     bytes4 private constant SEL_SETPROVIDER_EXT =
         bytes4(keccak256("setProvider(uint256,address,bytes)"));
 
+    /// @notice EIP-712 类型哈希
+    bytes32 private constant BID_TYPEHASH =
+        keccak256("Bid(uint256 jobId,uint256 price)");
+
+    bytes32 private constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+
     /**
-     * @notice 拦截 setProvider 带 optParams 版本，验证 EIP-191 签名
+     * @notice 拦截 setProvider 带 optParams 版本，验证 EIP-712 签名
      * @param jobId    任务 ID
      * @param selector 函数选择器（应为 SEL_SETPROVIDER_EXT）
      * @param data     abi.encode(msg.sender, provider, optParams)
      *                 其中 optParams = abi.encode(signature, price)
-     * @dev 签名消息 = keccak256(abi.encodePacked(jobId, price))
-     *      EIP-191 前缀包裹后 ecrecover 恢复出 signer
-     *      require(signer == provider) 确保签名者即被设置为 Provider 的地址
+     * @dev EIP-712 签名消息:
+     *      domainSeparator = hash(EIP712Domain(name:"BiddingHook", version:"1",
+     *          chainId, verifyingContract: address(this)))
+     *      structHash = hash(Bid(jobId, price))
+     *      digest = hash("\x19\x01" + domainSeparator + structHash)
+     *      CAW message_sign 可直接用此格式自动签名
      */
     function beforeAction(
         uint256 jobId,
@@ -60,23 +71,57 @@ contract BiddingHook is IACPHook {
         (bytes memory sig, uint256 price) =
             abi.decode(innerOptParams, (bytes, uint256));
 
-        _verifySignature(jobId, price, sig, provider);
+        _verifyEIP712Signature(jobId, price, sig, provider);
 
         // ---- 存储竞价记录 ----
         bids[jobId] = Bid(provider, price);
     }
 
-    /// @dev 提取签名验证到独立函数，避免 Stack too deep
-    function _verifySignature(
+    /**
+     * @notice 构建 EIP-712 domain separator
+     */
+    function _buildDomainSeparator() private view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                DOMAIN_TYPEHASH,
+                keccak256(bytes("BiddingHook")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this)
+            )
+        );
+    }
+
+    /**
+     * @notice 构建 EIP-712 签名摘要
+     * @param jobId 任务 ID
+     * @param price 报价金额
+     * @return digest EIP-712 摘要（已含 \x19\x01 前缀）
+     */
+    function _buildDigest(uint256 jobId, uint256 price)
+        private view returns (bytes32)
+    {
+        bytes32 domainSeparator = _buildDomainSeparator();
+        bytes32 structHash = keccak256(abi.encode(BID_TYPEHASH, jobId, price));
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+    }
+
+    /**
+     * @dev 提取签名中的 r, s, v 并验证 EIP-712 签名
+     * @param jobId 任务 ID
+     * @param price 报价金额
+     * @param sig 65 字节签名 (r[32] || s[32] || v[1])
+     * @param expectedSigner 期望的签名者地址
+     */
+    function _verifyEIP712Signature(
         uint256 jobId,
         uint256 price,
         bytes memory sig,
         address expectedSigner
-    ) private pure {
-        bytes32 messageHash = keccak256(abi.encodePacked(jobId, price));
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+    ) private view {
+        require(sig.length == 65, "BiddingHook: invalid signature length");
+
+        bytes32 digest = _buildDigest(jobId, price);
 
         bytes32 r;
         bytes32 s;
@@ -88,7 +133,7 @@ contract BiddingHook is IACPHook {
         }
         if (v < 27) v += 27;
 
-        address signer = ecrecover(ethSignedMessageHash, v, r, s);
+        address signer = ecrecover(digest, v, r, s);
         require(signer == expectedSigner, "BiddingHook: invalid signature");
     }
 

@@ -10,6 +10,7 @@ from agent_base import AgentBase
 from config import (
     ESCROW_ADDR, TTK_ADDR, CLIENT_UUID, CLIENT_ADDR,
     CLIENT_TOTAL_OPS, SIG_APPROVE, SIG_CREATE_JOB, SIG_SET_BUDGET, SIG_FUND,
+    SIG_SETPROVIDER, SIG_SETPROVIDER_EXT, BIDDING_HOOK_ADDR,
 )
 from caw_types import (
     AgentRole, CawWallet, JobContext, CawResult, WorkflowStep, ParsedIntent,
@@ -83,12 +84,14 @@ class ClientAgent(AgentBase):
         self,
         pact_id: str,
         context: JobContext,
-        step_name: str
+        step_name: str,
+        override_args=None
     ) -> CawResult:
         """Execute the on-chain transaction with client-specific args."""
         contract = self._get_target_contract(step_name)
         function_sig = self._get_function_signature(step_name)
-        args = self._get_transaction_args(context, step_name)
+        args = override_args if override_args is not None \
+            else self._get_transaction_args(context, step_name)
 
         return self.caw.execute_transaction(
             wallet=self.get_wallet(),
@@ -101,14 +104,17 @@ class ClientAgent(AgentBase):
     def _get_target_contract(self, step_name: str) -> str:
         if step_name == "approve_ttk":
             return TTK_ADDR
+        if step_name == "set_provider":
+            return ESCROW_ADDR
         return ESCROW_ADDR
 
     def _get_function_signature(self, step_name: str) -> str:
         mapping = {
-            "approve_ttk": SIG_APPROVE,
-            "create_job":  SIG_CREATE_JOB,
-            "set_budget":  SIG_SET_BUDGET,
-            "fund":        SIG_FUND,
+            "approve_ttk":  SIG_APPROVE,
+            "create_job":   SIG_CREATE_JOB,
+            "set_budget":   SIG_SET_BUDGET,
+            "fund":         SIG_FUND,
+            "set_provider": SIG_SETPROVIDER_EXT,
         }
         return mapping.get(step_name, "0x00000000")
 
@@ -119,6 +125,19 @@ class ClientAgent(AgentBase):
             return [ESCROW_ADDR.lower(), ttk_amount]
         elif step_name == "create_job":
             import time
+            is_bidding = (
+                hasattr(context, 'chain_data')
+                and context.chain_data.get("bidding", {}).get("is_bidding", False)
+            )
+            if is_bidding:
+                # Bidding mode: provider=0x0 (open bidding), hook=BiddingHook
+                return [
+                    "0x0000000000000000000000000000000000000000",  # zero addr
+                    "0xf6459a8868dc4d6db511f535f27887e54d2f0d6d",  # CAW Evaluator
+                    str(int(time.time()) + 86400 * 7),  # 7 days from now
+                    "CAW Bidding Job",
+                    BIDDING_HOOK_ADDR,  # BiddingHook
+                ]
             # provider, evaluator, expiredAt, description, hook
             return [
                 "0xe2b749ce285b86ff058653336191dec2be50f32c",  # CAW Provider
@@ -127,6 +146,12 @@ class ClientAgent(AgentBase):
                 "CAW Demo Job",
                 "0x0000000000000000000000000000000000000000",  # no hook
             ]
+        elif step_name == "set_provider":
+            bid_info = context.chain_data.get("bidding", {})
+            job_id = context.job_id or 0
+            winner = bid_info.get("winner_addr", "")
+            opt_params = bid_info.get("opt_params", "0x")
+            return [str(job_id), winner, opt_params]
         elif step_name == "set_budget":
             ttk_amount = str(int(Decimal(context.reward_amount or "100") * Decimal(10**18)))
             job_id = context.job_id or 0
@@ -152,11 +177,11 @@ class ClientAgent(AgentBase):
             # Extract job_id from on-chain: query jobCount() after successful createJob
             try:
                 import subprocess, os
-                from config import ESCROW_ADDR, PROXY_ENV
+                from config import ESCROW_ADDR, PROXY_ENV, RPC_URL
                 cast_env = {**os.environ, **PROXY_ENV, "FOUNDRY_DISABLE_NIGHTLY_WARNING": "1"}
                 result = subprocess.run(
                     ["cast", "call", ESCROW_ADDR, "jobCount()(uint256)",
-                     "--rpc-url", "https://sepolia.gateway.tenderly.co"],
+                     "--rpc-url", RPC_URL],
                     capture_output=True, text=True, env=cast_env, timeout=20
                 )
                 if result.returncode == 0 and result.stdout.strip():

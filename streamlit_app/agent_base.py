@@ -75,7 +75,8 @@ class AgentBase(ABC):
         step_name: str,
         error_handler=None,
         on_pact_generated=None,
-        on_tx_submitting=None
+        on_tx_submitting=None,
+        override_args=None
     ) -> JobContext:
         """
         Execute a single workflow step with optional error-handler retry logic.
@@ -122,7 +123,8 @@ class AgentBase(ABC):
                 on_tx_submitting(step_name, self._get_target_contract(step_name),
                                  self._get_function_signature(step_name),
                                  self._get_transaction_args(context, step_name))
-            tx_result = self._execute_onchain(pact_id, context, step_name)
+            tx_result = self._execute_onchain(pact_id, context, step_name,
+                                               override_args=override_args)
             if not tx_result.get("success"):
                 context.error_message = f"On-chain tx failed: {tx_result.get('stderr','')}"
                 context.current_step = WorkflowStep.FAILED
@@ -176,10 +178,13 @@ class AgentBase(ABC):
 
             # 4. Execute on-chain
             if on_tx_submitting:
+                args_for_display = override_args if override_args is not None \
+                    else self._get_transaction_args(context, step_name)
                 on_tx_submitting(step_name, self._get_target_contract(step_name),
                                  self._get_function_signature(step_name),
-                                 self._get_transaction_args(context, step_name))
-            tx_result = self._execute_onchain(result.get("pact_id",""), context, step_name)
+                                 args_for_display)
+            tx_result = self._execute_onchain(result.get("pact_id",""), context, step_name,
+                                               override_args=override_args)
             if not tx_result.get("success"):
                 if self._should_retry_error(error_handler, tx_result.get("stderr",""), attempt, max_retries):
                     continue
@@ -276,7 +281,8 @@ class AgentBase(ABC):
         self,
         pact_id: str,
         context: JobContext,
-        step_name: str
+        step_name: str,
+        override_args=None
     ) -> CawResult:
         """
         Execute the on-chain transaction via CAW.
@@ -286,7 +292,8 @@ class AgentBase(ABC):
         # Default: extract from context or use generic call
         contract = self._get_target_contract(step_name)
         function_sig = self._get_function_signature(step_name)
-        args = self._get_transaction_args(context, step_name)
+        args = override_args if override_args is not None \
+            else self._get_transaction_args(context, step_name)
 
         return self.caw.execute_transaction(
             wallet=self.get_wallet(),

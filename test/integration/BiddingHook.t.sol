@@ -36,21 +36,26 @@ contract BiddingHookIntegrationTest is Test {
     }
 
     // ─────────────────────────────────────────────────────────
-    // Internal helper: 对 (jobId, price) 生成 EIP-191 签名
-    // ─────────────────────────────────────────────────────────
+    // Internal helper: 对 (jobId, price) 生成 EIP-712 签名（v2: 兼容 CAW message_sign）
     function _signBid(
         uint256 jobId,
         uint256 price,
         uint256 privateKey
     ) internal returns (bytes memory sig) {
-        bytes32 messageHash = keccak256(abi.encodePacked(jobId, price));
-        bytes32 ethSignedHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        (v, r, s) = vm.sign(privateKey, ethSignedHash);
+        bytes32 domainSeparator = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("BiddingHook")),
+            keccak256(bytes("1")),
+            block.chainid,
+            address(hook)
+        ));
+        bytes32 structHash = keccak256(abi.encode(
+            keccak256("Bid(uint256 jobId,uint256 price)"),
+            jobId,
+            price
+        ));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         sig = new bytes(65);
         assembly {
             mstore(add(sig, 32), r)

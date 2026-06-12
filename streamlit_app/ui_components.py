@@ -144,34 +144,67 @@ def render_role_status_cards(client_pct: float, provider_pct: float, evaluator_p
             st.caption(f"{completed}/{total_ops} ops complete")
 
 
-def render_tx_history(tx_history: list):
+def render_tx_history(tx_list: list):
     """
-    Render the transaction history table with Etherscan links.
+    Render transaction history from timeline tx entries.
+    Each entry: {kind:"tx", human:"...", technical:"...", tx_hash:"0x..."}
+    Shows function name, contract, and clickable Etherscan link.
     """
     st.subheader("📜 Transaction History")
 
-    if not tx_history:
+    if not tx_list:
         st.caption("No transactions yet")
         return
 
-    for i, tx in enumerate(tx_history):
-        step = tx.get("step", "unknown")
-        tx_hash = tx.get("tx_hash", "")
-        status = tx.get("status", "pending")
-        link = tx.get("etherscan_link", "")
+    import re
 
-        status_icon = "✓" if status == "confirmed" else "⏳" if status == "pending" else "✗"
-        short_hash = tx_hash[:10] + "..." + tx_hash[-6:] if tx_hash else "N/A"
+    for i, entry in enumerate(tx_list):
+        human = entry.get("human", "")
+        technical = entry.get("technical", "")
+        tx_hash = entry.get("tx_hash", "")
 
-        cols = st.columns([1, 3, 2])
-        with cols[0]:
-            st.markdown(f"{status_icon}")
-        with cols[1]:
-            st.markdown(f"**{step}**")
-            st.caption(short_hash)
-        with cols[2]:
-            if link:
-                st.markdown(f"[Etherscan ↗]({link})")
+        # Extract details from technical string
+        contract_match = re.search(r'合约地址\*\*: `(0x[a-fA-F0-9]{40})`', technical)
+        contract_name_match = re.search(r'\(([^)]+)\)', technical.split('\n')[0]) if contract_match else None
+        func_match = re.search(r'函数签名\*\*: `([^`]+)`', technical)
+        tx_hash_match = re.search(r'Tx Hash\*\*: `(0x[a-fA-F0-9]{64})`', technical)
+
+        contract_name = contract_name_match.group(1) if contract_name_match else "合约"
+        func_sig = func_match.group(1) if func_match else "?"
+        tx_hash = tx_hash or (tx_hash_match.group(1) if tx_hash_match else "")
+
+        # Human-readable function name
+        func_name = func_sig
+        if func_sig.startswith("0x"):
+            from config import SEL_APPROVE, SEL_CREATE_JOB, SEL_SET_BUDGET, SEL_FUND, SEL_SUBMIT, SEL_COMPLETE, SEL_REJECT, SEL_SETPROVIDER_EXT
+            sel_map = {
+                SEL_APPROVE: "approve", SEL_CREATE_JOB: "createJob", SEL_SET_BUDGET: "setBudget",
+                SEL_FUND: "fund", SEL_SUBMIT: "submit", SEL_COMPLETE: "complete", SEL_REJECT: "reject",
+                SEL_SETPROVIDER_EXT: "setProvider",
+            }
+            func_name = sel_map.get(func_sig, func_sig[:10])
+        else:
+            func_name = func_sig.split("(")[0] if "(" in func_sig else func_sig
+
+        # Step label from human
+        step_label = human.split("\n")[0].replace("⛓️ 链上执行：", "").replace("**", "").strip()
+        if not step_label:
+            step_label = func_name
+
+        # Etherscan link
+        if tx_hash:
+            etherscan_link = f"https://sepolia.etherscan.io/tx/{tx_hash}"
+            link_html = f'<a href="{etherscan_link}" target="_blank" style="color:#4a90d9;text-decoration:none;">🔗 {tx_hash[:10]}...</a>'
+        else:
+            link_html = "⏳ 等待确认..."
+
+        st.markdown(f"""
+        <div style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:0.85em">
+            <b>{step_label}</b><br>
+            <span style="color:#888">{contract_name} · {func_name}</span><br>
+            {link_html}
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def render_log_expander(log_entries: list):

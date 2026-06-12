@@ -31,7 +31,8 @@ class WorkflowStep(Enum):
 
 class CawWallet(Enum):
     CLIENT = "5a8eeb0c-f528-495f-97ab-223f5ce12741"
-    PROVIDER = "7b30435c-127f-4f30-9b77-99d0411a9e7f"
+    PROVIDER = "3f01ec47-8f69-4118-813f-4b2dfd123975"
+    PROVIDER2 = "2a62f9a9-4454-45b3-af83-83719252e7b9"
     EVALUATOR = "4cbd29cc-4cde-47b0-8b89-cf9c89daae72"
 
 

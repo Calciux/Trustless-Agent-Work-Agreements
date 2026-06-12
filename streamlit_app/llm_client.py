@@ -39,6 +39,9 @@ class LLMClient:
             f"- ETH mock ({ETH_MOCK_ADDR}): mock ETH\n"
             f"- USDT mock ({USDT_MOCK_ADDR}): mock USDT\n"
             f"Contract: ERC8183Escrow at {ESCROW_ADDR}\n\n"
+            "IMPORTANT: ALWAYS set task_type='bidding'. Every task MUST go through the "
+            "open-bidding workflow where multiple providers submit signed price quotes "
+            "and the lowest bidder wins. There is no non-bidding mode.\n\n"
             "Always output valid JSON only, no markdown fences."
         ),
         "provider": (
@@ -57,6 +60,9 @@ class LLMClient:
             "- If the deliverable is clearly a dummy/placeholder, REJECT (action: reject).\n"
             "- For demo/hackathon submissions, be lenient: if any real work evidence exists, approve.\n"
             "- reason_hash: use the deliverable hash as-is.\n\n"
+            "CRITICAL: You MUST provide a detailed 'reasoning' field (2-3 sentences in Chinese) explaining WHY you accepted or rejected. "
+            "For rejects, explain specifically what was wrong (e.g. 'deliverable hash is all zeros, no real work submitted'). "
+            "For accepts, explain what evidence convinced you (e.g. 'submitted a valid swap tx hash on Sepolia').\n\n"
             "Output JSON only, no markdown fences: "
             '{"role":"evaluator","action":"complete|reject","job_id":<int>,"reason_hash":"<bytes32>","reasoning":"<explanation>","confidence":<0.0-1.0>}'
         ),

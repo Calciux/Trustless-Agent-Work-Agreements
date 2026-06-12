@@ -31,18 +31,26 @@ contract BiddingHookTest is Test {
     // Internal helpers
     // ─────────────────────────────────────────────────────────
 
-    /// @dev 对 (jobId, price) 生成 EIP-191 签名
+    /// @dev 对 (jobId, price) 生成 EIP-712 签名（v2: 兼容 CAW message_sign）
     function _signBid(
         uint256 jobId,
         uint256 price,
         uint256 privateKey
     ) internal returns (bytes memory sig) {
-        bytes32 messageHash = keccak256(abi.encodePacked(jobId, price));
-        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        (v, r, s) = vm.sign(privateKey, ethSignedHash);
+        bytes32 domainSeparator = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("BiddingHook")),
+            keccak256(bytes("1")),
+            block.chainid,
+            address(hook)
+        ));
+        bytes32 structHash = keccak256(abi.encode(
+            keccak256("Bid(uint256 jobId,uint256 price)"),
+            jobId,
+            price
+        ));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         sig = new bytes(65);
         assembly {
             mstore(add(sig, 32), r)
@@ -214,13 +222,13 @@ contract BiddingHookTest is Test {
 
         bytes memory data = _encodeData(address(this), provider, shortSig, price);
 
-        // assembly 读取越界 → ecrecover 返回 address(0) → signer ≠ provider
-        vm.expectRevert("BiddingHook: invalid signature");
+        // 签名长度不足，应 revert
+        vm.expectRevert("BiddingHook: invalid signature length");
         hook.beforeAction(jobId, SEL_SETPROVIDER_EXT, data);
     }
 
     // ═════════════════════════════════════════════════════════
-    // UT-BID-008: 签名长度错误（> 65 字节）→ 行为记录
+    // UT-BID-008: 签名长度错误（> 65 字节）→ revert (v2: 严格长度检查)
     // ═════════════════════════════════════════════════════════
     function test_BID_008_SignatureTooLong_Behavior() public {
         uint256 providerKey = 0xABCD;
@@ -228,19 +236,14 @@ contract BiddingHookTest is Test {
         uint256 jobId = 1;
         uint256 price = 100;
 
-        // 生成有效签名（65 字节），然后追加 31 字节垃圾数据 → 96 字节
         bytes memory validSig = _signBid(jobId, price, providerKey);
         bytes memory longSig = abi.encodePacked(validSig, bytes31(0));
-        // longSig 长度 = 65 + 31 = 96
 
-        // assembly 只读取前 65 字节 → 签名有效 → 应成功存储
         bytes memory data = _encodeData(address(this), provider, longSig, price);
 
+        // v2: 严格长度检查 → revert
+        vm.expectRevert("BiddingHook: invalid signature length");
         hook.beforeAction(jobId, SEL_SETPROVIDER_EXT, data);
-
-        (address storedProvider, uint256 storedPrice) = hook.bids(jobId);
-        assertEq(storedProvider, provider, "long sig: provider should match");
-        assertEq(storedPrice, price, "long sig: price should match");
     }
 
     // ═════════════════════════════════════════════════════════

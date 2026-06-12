@@ -13,7 +13,9 @@ from config import (
     CHAIN, CLIENT_UUID, PROVIDER_UUID, EVALUATOR_UUID,
     SEL_APPROVE, SEL_CREATE_JOB, SEL_SET_BUDGET, SEL_FUND,
     SEL_SUBMIT, SEL_COMPLETE, SEL_REJECT,
-    PACT_OPTIMIZED, CLIENT_TOTAL_OPS,
+    SEL_SETPROVIDER_EXT,
+    PACT_OPTIMIZED, CLIENT_TOTAL_OPS, CLIENT_TOTAL_OPS_BIDDING,
+    BIDDING_HOOK_ADDR,
 )
 from caw_types import PactTemplate, JobContext
 
@@ -25,7 +27,7 @@ class PactGenerator:
     and validates the resulting JSON structure.
     """
 
-    # Mapping of (role, step) → template filename
+    # Mapping of (role, step) -> template filename
     TEMPLATE_MAP = {
         ("client", "approve_ttk"): "pact_client_approve.json",
         ("client", "create_task"): "pact_client_escrow.json",
@@ -37,7 +39,7 @@ class PactGenerator:
         ("evaluator", "reject"):   "pact_evaluator_resolve.json",
     }
 
-    # Optimized mapping: all client steps → merged Pact, other roles unchanged
+    # Optimized mapping: all client steps -> merged Pact, other roles unchanged
     TEMPLATE_MAP_OPTIMIZED = {
         ("client", "approve_ttk"): "optimized/pact_client_merged.json",
         ("client", "create_task"): "optimized/pact_client_merged.json",
@@ -47,6 +49,19 @@ class PactGenerator:
         ("provider", "submit"):    "optimized/pact_provider_submit.json",
         ("evaluator", "complete"): "optimized/pact_evaluator_resolve.json",
         ("evaluator", "reject"):   "optimized/pact_evaluator_resolve.json",
+    }
+
+    # Bidding mapping: all client steps -> bidding merged Pact (includes setProvider)
+    TEMPLATE_MAP_BIDDING = {
+        ("client", "approve_ttk"):  "optimized/pact_client_bidding.json",
+        ("client", "create_task"):  "optimized/pact_client_bidding.json",
+        ("client", "create_job"):   "optimized/pact_client_bidding.json",
+        ("client", "set_provider"): "optimized/pact_client_bidding.json",
+        ("client", "set_budget"):   "optimized/pact_client_bidding.json",
+        ("client", "fund"):         "optimized/pact_client_bidding.json",
+        ("provider", "submit"):     "optimized/pact_provider_submit.json",
+        ("evaluator", "complete"):  "optimized/pact_evaluator_resolve.json",
+        ("evaluator", "reject"):    "optimized/pact_evaluator_resolve.json",
     }
 
     def __init__(self, templates_dir: str = None):
@@ -64,13 +79,14 @@ class PactGenerator:
     # Template loading
     # ------------------------------------------------------------------
 
-    def load_template(self, role: str, step: str) -> PactTemplate:
+    def load_template(self, role: str, step: str, context: JobContext = None) -> PactTemplate:
         """
         Load a template JSON file from disk.
 
         Args:
             role: Agent role (client/provider/evaluator).
             step: Workflow step name.
+            context: Optional JobContext -- used to detect bidding flow.
 
         Returns:
             PactTemplate with policies and conditions loaded.
@@ -83,8 +99,23 @@ class PactGenerator:
         if cache_key in self._template_cache:
             return self._template_cache[cache_key]
 
-        # Select template map based on mode: optimized maps all client steps to one merged Pact
-        template_map = self.TEMPLATE_MAP_OPTIMIZED if PACT_OPTIMIZED else self.TEMPLATE_MAP
+        # Select template map based on mode:
+        #   - bidding context + PACT_OPTIMIZED -> TEMPLATE_MAP_BIDDING
+        #   - PACT_OPTIMIZED                   -> TEMPLATE_MAP_OPTIMIZED
+        #   - else                             -> TEMPLATE_MAP (original)
+        is_bidding = (
+            PACT_OPTIMIZED
+            and context is not None
+            and hasattr(context, 'chain_data')
+            and context.chain_data.get("bidding", {}).get("is_bidding", False)
+        )
+
+        if is_bidding:
+            template_map = self.TEMPLATE_MAP_BIDDING
+        elif PACT_OPTIMIZED:
+            template_map = self.TEMPLATE_MAP_OPTIMIZED
+        else:
+            template_map = self.TEMPLATE_MAP
         filename = template_map.get((role, step))
         if filename is None:
             raise ValueError(f"No template for role={role}, step={step}")
@@ -123,19 +154,19 @@ class PactGenerator:
         Fill {{placeholders}} in the template with actual values.
 
         Standard placeholders filled automatically:
-            {{chain}}          → chain (default "SETH")
-            {{ttk_addr}}       → TTK_ADDR
-            {{escrow_addr}}    → ESCROW_ADDR
-            {{job_id}}         → job_id
-            {{max_ttk}}        → from overrides
-            {{max_eth}}        → from overrides
-            {{max_tx}}         → from overrides
-            {{step_count}}     → from overrides
-            {{action}}         → "complete" or "reject"
-            {{selector}}       → function selector from config
-            {{ttk_amount}}     → from overrides
-            {{deliverable_hash}} → from overrides
-            {{reason_hash}}    → from overrides
+            {{chain}}          -> chain (default "SETH")
+            {{ttk_addr}}       -> TTK_ADDR
+            {{escrow_addr}}    -> ESCROW_ADDR
+            {{job_id}}         -> job_id
+            {{max_ttk}}        -> from overrides
+            {{max_eth}}        -> from overrides
+            {{max_tx}}         -> from overrides
+            {{step_count}}     -> from overrides
+            {{action}}         -> "complete" or "reject"
+            {{selector}}       -> function selector from config
+            {{ttk_amount}}     -> from overrides
+            {{deliverable_hash}} -> from overrides
+            {{reason_hash}}    -> from overrides
         """
         # Use full raw_data to preserve name, type, and other top-level fields
         full_str = json.dumps(template.raw_data, indent=2)
@@ -145,6 +176,7 @@ class PactGenerator:
             "{{chain}}":          chain,
             "{{ttk_addr}}":       TTK_ADDR,
             "{{escrow_addr}}":    ESCROW_ADDR,
+            "{{bidding_hook_addr}}": BIDDING_HOOK_ADDR,
             "{{job_id}}":         str(job_id),
             "{{original_intent}}": overrides.get("original_intent", ""),
             "{{max_ttk}}":        overrides.get("max_ttk", "200000000000000000000"),
@@ -178,7 +210,7 @@ class PactGenerator:
         context: JobContext
     ) -> dict:
         """
-        High-level convenience: load → fill → validate → return.
+        High-level convenience: load -> fill -> validate -> return.
 
         Args:
             role: Agent role.
@@ -188,7 +220,7 @@ class PactGenerator:
         Returns:
             Validated Pact JSON dict.
         """
-        template = self.load_template(role, step)
+        template = self.load_template(role, step, context)
         overrides = self._extract_overrides(context, step)
         job_id = context.job_id if context.job_id is not None else "auto"
         pact = self.fill_template(template, job_id, **overrides)
@@ -225,7 +257,7 @@ class PactGenerator:
                     f"Unresolved placeholders remain in Pact: {', '.join(unresolved)}"
                 )
 
-        # Check required keys — templates use "policies" (also support "rules" as alias)
+        # Check required keys -- templates use "policies" (also support "rules" as alias)
         policy_block = pact.get("policies") or pact.get("rules") or {}
         if isinstance(policy_block, dict):
             effect = policy_block.get("effect", "")
@@ -272,7 +304,7 @@ class PactGenerator:
                 reward_wei = "100000000000000000000"
             max_ttk = str(int(Decimal(reward_wei)) * 2)  # 2x buffer
 
-            # ETH budget from input_amount (e.g., "0.1" ETH → 0.1 * 10^18 with 10x buffer)
+            # ETH budget from input_amount (e.g., "0.1" ETH -> 0.1 * 10^18 with 10x buffer)
             input_str = context.input_amount or "0.1"
             try:
                 input_wei = str(int(Decimal(input_str) * Decimal(10**18) * 10))  # 10x safety
@@ -300,12 +332,22 @@ class PactGenerator:
                 overrides["max_tx"] = str(CLIENT_TOTAL_OPS + 2)
                 overrides["step_count"] = str(CLIENT_TOTAL_OPS)
 
-        elif step in ("create_job", "set_budget", "fund"):
+        elif step in ("create_job", "set_budget", "fund", "set_provider"):
             overrides["max_eth"] = input_wei
-            overrides["max_tx"] = str(CLIENT_TOTAL_OPS + 2)  # 4 ops + 2 buffer = 6
+            is_bidding = (
+                hasattr(context, 'chain_data')
+                and context.chain_data.get("bidding", {}).get("is_bidding", False)
+            )
+            if is_bidding:
+                overrides["max_tx"] = str(CLIENT_TOTAL_OPS_BIDDING + 2)  # 5 ops + 2 buffer = 7
+            else:
+                overrides["max_tx"] = str(CLIENT_TOTAL_OPS + 2)  # 4 ops + 2 buffer = 6
             if PACT_OPTIMIZED:
-                # Merged Pact covers all 4 client steps
-                overrides["step_count"] = str(CLIENT_TOTAL_OPS)
+                if is_bidding:
+                    overrides["step_count"] = str(CLIENT_TOTAL_OPS_BIDDING)
+                else:
+                    # Merged Pact covers all 4 client steps
+                    overrides["step_count"] = str(CLIENT_TOTAL_OPS)
             else:
                 if step == "create_job":
                     overrides["step_count"] = "3"  # createJob + setBudget + fund
@@ -316,6 +358,8 @@ class PactGenerator:
                     from decimal import Decimal
                     ttk_amount = str(int(Decimal(context.reward_amount or "100") * Decimal(10**18)))
                     overrides["fund_amount"] = ttk_amount
+                elif step == "set_provider":
+                    overrides["step_count"] = "1"
 
         elif step == "submit":
             # Generate a deterministic deliverable hash from job context
