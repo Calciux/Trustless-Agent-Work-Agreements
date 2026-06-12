@@ -255,7 +255,7 @@ createJob 内部调用 `IACPHook(hook).afterAction()`，setProvider 调用 `Bidd
 ```
 
 ### 3. 跨环境钱包
-
+![唯一一步人工Pact审批](IMG_3150.PNG)
 | 环境 | 钱包 | 特点 |
 |------|------|------|
 | CLIENT (DEV) | 配对，需 CAW App 审批 Pact | approve/createJob/setBudget/fund |
